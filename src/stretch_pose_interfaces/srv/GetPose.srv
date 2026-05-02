@@ -1,4 +1,6 @@
 ---
-geometry_msgs/TransformStamped[] poses   # [0]=world, [1]=robot, [2]=aruco
+geometry_msgs/TransformStamped world_poses
+geometry_msgs/TransformStamped robot_poses
+geometry_msgs/TransformStamped aruco_poses
 bool success
 string message

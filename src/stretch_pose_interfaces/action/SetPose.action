@@ -1,6 +1,5 @@
 # Goal
 geometry_msgs/TransformStamped target_pose
-int32 frame_id    # 0=world(odom), 1=robot(base_link), 2=aruco(column_4)
 ---
 # Result
 bool success
