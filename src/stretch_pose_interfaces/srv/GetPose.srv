@@ -1,0 +1,4 @@
+---
+geometry_msgs/TransformStamped[] poses   # [0]=world, [1]=robot, [2]=aruco
+bool success
+string message
