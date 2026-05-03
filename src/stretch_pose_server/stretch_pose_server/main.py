@@ -18,11 +18,8 @@ ROBOT_FRAME = "base_link"
 ARUCO_FRAME = "column_4"
 VALID_FRAMES = {WORLD_FRAME, ROBOT_FRAME, ARUCO_FRAME}
 
-HOME_X = 0
 HOME_Y = -0.5
-HOME_z = 0.7
 HOME_ARM = 0.1
-HOME_LIFT = 0.6
 
 
 class PoseServer(HelloNode):
@@ -35,18 +32,18 @@ class PoseServer(HelloNode):
             self, "pose_server", "pose_server", wait_for_first_pointcloud=False
         )
 
-        callback_group = ReentrantCallbackGroup()
+        self._callback_group = ReentrantCallbackGroup()
 
         # Define GetPose service.
-        _get_pose_service = self.create_service(
-            GetPose, "get_pose", self._get_pose_callback, callback_group=callback_group
+        self._get_pose_service = self.create_service(
+            GetPose, "get_pose", self._get_pose_callback, callback_group=self._callback_group
         )
 
         # Define SetPose action.
-        _set_pose_service = ActionServer(
+        self._set_pose_service = ActionServer(
             self, SetPose, 'set_pose', execute_callback=self._set_pose_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT, cancel_callback=lambda _: CancelResponse.ACCEPT,
-            callback_group=callback_group
+            callback_group=self._callback_group
         )
 
         # Ready.
