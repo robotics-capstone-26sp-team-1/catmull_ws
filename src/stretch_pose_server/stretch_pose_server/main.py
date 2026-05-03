@@ -143,23 +143,41 @@ class PoseServer(HelloNode):
             f"joint_lift={joints['joint_lift']:.3f}"
         )
 
+        # Check for cancellation before moving.
+        if goal_handle.is_cancel_requested:
+            feedback.status = "Cancelled."
+            goal_handle.publish_feedback(feedback)
+            result.success = False
+            result.message = "Goal cancelled before motion started."
+            goal_handle.canceled()
+            return result
+
         # Execute joint command.
         feedback.status = "Moving to pose..."
         goal_handle.publish_feedback(feedback)
 
         try:
             self.move_to_pose(joints, blocking=True)
-
-            feedback.status = "Done!"
-            goal_handle.publish_feedback(feedback)
-            goal_handle.succeed()
-            result.success = True
-            result.message = "OK"
         except Exception as e:
             result.success = False
             result.message = str(e)
             goal_handle.abort()
+            return result
 
+        # Check for cancellation after motion completes.
+        if goal_handle.is_cancel_requested:
+            feedback.status = "Cancelled."
+            goal_handle.publish_feedback(feedback)
+            result.success = False
+            result.message = "Goal cancelled after motion completed."
+            goal_handle.canceled()
+            return result
+
+        feedback.status = "Done!"
+        goal_handle.publish_feedback(feedback)
+        goal_handle.succeed()
+        result.success = True
+        result.message = "OK"
         return result
 
     @staticmethod
