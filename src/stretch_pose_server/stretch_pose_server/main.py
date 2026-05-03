@@ -3,6 +3,7 @@ from hello_helpers.hello_misc import HelloNode
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.duration import Duration
+from rclpy import spin
 
 # noinspection PyUnresolvedReferences
 from stretch_pose_interfaces.srv import GetPose
@@ -169,6 +170,7 @@ class PoseServer(HelloNode):
 def main():
     node = PoseServer()
     node.main()
+    spin(node)
 
 
 if __name__ == "__main__":

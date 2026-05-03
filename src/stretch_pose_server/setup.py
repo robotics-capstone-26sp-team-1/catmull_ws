@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'pose_server = stretch_pose_server.main:main',
         ],
     },
 )
