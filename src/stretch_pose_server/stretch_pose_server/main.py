@@ -5,10 +5,10 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.duration import Duration
 
 # noinspection PyUnresolvedReferences
-from stretch_pose_interface.srv import GetPose
+from stretch_pose_interfaces.srv import GetPose
 
 # noinspection PyUnresolvedReferences
-from stretch_pose_interface.action import SetPose
+from stretch_pose_interfaces.action import SetPose
 
 # Constants.
 END_FRAME = "link_grasp_center"
@@ -44,7 +44,7 @@ class PoseServer(HelloNode):
         # Define SetPose action.
         _set_pose_service = ActionServer(
             self, SetPose, 'set_pose', execute_callback=self._set_pose_execute,
-            goal_callback=lambda goal: GoalResponse.ACCEPT, cancel_callback=CancelResponse.ACCEPT,
+            goal_callback=lambda _: GoalResponse.ACCEPT, cancel_callback=lambda _: CancelResponse.ACCEPT,
             callback_group=callback_group
         )
 
@@ -112,8 +112,10 @@ class PoseServer(HelloNode):
 
             target_in_robot_frame = self.tf2_buffer.transform(target_point, ROBOT_FRAME, timeout=Duration(seconds=1))
         except Exception as e:
-            feedback.success = False
-            feedback.message = f"Unable to get target pose: {e}."
+            feedback.status = "Unable to get target pose."
+            goal_handle.publish_feedback(feedback)
+            result.success = False
+            result.message = f"Unable to get target pose: {e}."
             goal_handle.abort()
             return result
 
