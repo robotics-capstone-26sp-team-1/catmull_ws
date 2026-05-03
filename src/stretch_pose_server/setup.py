@@ -13,10 +13,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='kenneth',
-    maintainer_email='kenneth@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    maintainer='Kenneth Yang',
+    maintainer_email='kjy5@uw.edu',
+    description='ROS 2 package for stretch pose server.',
+    license='Apache-2.0',
     extras_require={
         'test': [
             'pytest',

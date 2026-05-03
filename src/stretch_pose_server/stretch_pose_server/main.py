@@ -36,14 +36,21 @@ class PoseServer(HelloNode):
 
         # Define GetPose service.
         self._get_pose_service = self.create_service(
-            GetPose, "get_pose", self._get_pose_callback, callback_group=self._callback_group
+            GetPose,
+            "get_pose",
+            self._get_pose_callback,
+            callback_group=self._callback_group,
         )
 
         # Define SetPose action.
         self._set_pose_service = ActionServer(
-            self, SetPose, 'set_pose', execute_callback=self._set_pose_execute,
-            goal_callback=lambda _: GoalResponse.ACCEPT, cancel_callback=lambda _: CancelResponse.ACCEPT,
-            callback_group=self._callback_group
+            self,
+            SetPose,
+            "set_pose",
+            execute_callback=self._set_pose_execute,
+            goal_callback=lambda _: GoalResponse.ACCEPT,
+            cancel_callback=lambda _: CancelResponse.ACCEPT,
+            callback_group=self._callback_group,
         )
 
         # Ready.
@@ -108,7 +115,9 @@ class PoseServer(HelloNode):
             target_point.point.y = target.transform.translation.y
             target_point.point.z = target.transform.translation.z
 
-            target_in_robot_frame = self.tf2_buffer.transform(target_point, ROBOT_FRAME, timeout=Duration(seconds=1))
+            target_in_robot_frame = self.tf2_buffer.transform(
+                target_point, ROBOT_FRAME, timeout=Duration(seconds=1)
+            )
         except Exception as e:
             feedback.status = "Unable to get target pose."
             goal_handle.publish_feedback(feedback)
@@ -128,10 +137,10 @@ class PoseServer(HelloNode):
         joints = self._transform_to_joints(target_x, target_y, target_z)
 
         self.get_logger().info(
-            f'Joint commands → '
-            f'translate_mobile_base={joints["translate_mobile_base"]:.3f} '
-            f'joint_arm={joints["joint_arm"]:.3f} '
-            f'joint_lift={joints["joint_lift"]:.3f}'
+            f"Joint commands → "
+            f"translate_mobile_base={joints['translate_mobile_base']:.3f} "
+            f"joint_arm={joints['joint_arm']:.3f} "
+            f"joint_lift={joints['joint_lift']:.3f}"
         )
 
         # Execute joint command.
