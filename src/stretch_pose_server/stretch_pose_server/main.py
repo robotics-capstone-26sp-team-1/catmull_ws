@@ -17,7 +17,7 @@ from stretch_pose_interfaces.action import SetPose
 END_FRAME = "link_grasp_center"
 WORLD_FRAME = "odom"
 ROBOT_FRAME = "base_link"
-ARUCO_FRAME = "column_4"
+ARUCO_FRAME = "column_1"
 VALID_FRAMES = {WORLD_FRAME, ROBOT_FRAME, ARUCO_FRAME}
 
 HOME_Y = -0.5
@@ -144,7 +144,7 @@ class PoseServer(HelloNode):
 
         self.get_logger().info(
             f"Joint commands → "
-            # f"translate_mobile_base={joints['translate_mobile_base']:.3f} "
+            f"translate_mobile_base={joints['translate_mobile_base']:.3f} "
             f"joint_arm={joints['joint_arm']:.3f} "
             f"joint_lift={joints['joint_lift']:.3f}"
         )
@@ -179,11 +179,16 @@ class PoseServer(HelloNode):
             goal_handle.canceled()
             return result
 
+        self.get_logger().info("Target reached!")
+
         feedback.status = "Done!"
         goal_handle.publish_feedback(feedback)
         goal_handle.succeed()
         result.success = True
         result.message = "OK"
+
+        print("===")
+
         return result
 
     @staticmethod
@@ -191,7 +196,7 @@ class PoseServer(HelloNode):
         arm = HOME_ARM + (-(transform_y - HOME_Y))
         lift = transform_z - 0.1
         return {
-            # "translate_mobile_base": transform_x,
+            "translate_mobile_base": transform_x,
             "joint_arm": arm,
             "joint_lift": lift,
         }
