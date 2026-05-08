@@ -4,6 +4,7 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.duration import Duration
 from rclpy import spin
+from rclpy.service import Service
 
 # noinspection PyUnresolvedReferences
 from stretch_pose_interfaces.srv import GetPose
@@ -25,6 +26,9 @@ HOME_ARM = 0.1
 class PoseServer(HelloNode):
     def __init__(self):
         HelloNode.__init__(self)
+        self._callback_group: ReentrantCallbackGroup | None = None
+        self._get_pose_service: Service | None = None
+        self._set_pose_service: ActionServer | None = None
 
     # noinspection PyMethodOverriding
     def main(self):
