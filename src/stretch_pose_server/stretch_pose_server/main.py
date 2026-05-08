@@ -3,7 +3,7 @@ from hello_helpers.hello_misc import HelloNode
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.duration import Duration
-from rclpy import spin
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.service import Service
 import tf2_geometry_msgs  # noqa: F401  (registers geometry msg transforms for tf2)
 
@@ -200,7 +200,9 @@ class PoseServer(HelloNode):
 def main():
     node = PoseServer()
     node.main()
-    spin(node)
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    executor.spin()
 
 
 if __name__ == "__main__":
