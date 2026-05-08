@@ -5,6 +5,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.duration import Duration
 from rclpy import spin
 from rclpy.service import Service
+import tf2_geometry_msgs  # noqa: F401  (registers geometry msg transforms for tf2)
 
 # noinspection PyUnresolvedReferences
 from stretch_pose_interfaces.srv import GetPose
@@ -71,7 +72,7 @@ class PoseServer(HelloNode):
         try:
             tf_world = self.get_tf(WORLD_FRAME, END_FRAME)
             tf_robot = self.get_tf(ROBOT_FRAME, END_FRAME)
-            tf_aruco = self.get_tf(ARUCO_FRAME, END_FRAME)
+            tf_aruco = self.get_tf(ROBOT_FRAME, END_FRAME)
 
             if any(t is None for t in [tf_world, tf_robot, tf_aruco]):
                 response.success = False
@@ -128,6 +129,7 @@ class PoseServer(HelloNode):
             result.success = False
             result.message = f"Unable to get target pose: {e}."
             goal_handle.abort()
+            self.get_logger().error(f"Unable to get target pose: {e}.")
             return result
 
         # Compute joint command.
@@ -142,7 +144,7 @@ class PoseServer(HelloNode):
 
         self.get_logger().info(
             f"Joint commands → "
-            f"translate_mobile_base={joints['translate_mobile_base']:.3f} "
+            # f"translate_mobile_base={joints['translate_mobile_base']:.3f} "
             f"joint_arm={joints['joint_arm']:.3f} "
             f"joint_lift={joints['joint_lift']:.3f}"
         )
@@ -189,7 +191,7 @@ class PoseServer(HelloNode):
         arm = HOME_ARM + (-(transform_y - HOME_Y))
         lift = transform_z - 0.1
         return {
-            "translate_mobile_base": transform_x,
+            # "translate_mobile_base": transform_x,
             "joint_arm": arm,
             "joint_lift": lift,
         }
