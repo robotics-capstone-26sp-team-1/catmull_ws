@@ -72,7 +72,7 @@ class PoseServer(HelloNode):
         try:
             tf_world = self.get_tf(WORLD_FRAME, END_FRAME)
             tf_robot = self.get_tf(ROBOT_FRAME, END_FRAME)
-            tf_aruco = self.get_tf(ROBOT_FRAME, END_FRAME)
+            tf_aruco = self.get_tf(ARUCO_FRAME, END_FRAME)
 
             if any(t is None for t in [tf_world, tf_robot, tf_aruco]):
                 response.success = False
