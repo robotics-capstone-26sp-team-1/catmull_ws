@@ -17,7 +17,7 @@ from stretch_pose_interfaces.action import SetPose
 END_FRAME = "link_grasp_center"
 WORLD_FRAME = "odom"
 ROBOT_FRAME = "base_link"
-ARUCO_FRAME = "column_1"
+ARUCO_FRAME = "column_4"
 VALID_FRAMES = {WORLD_FRAME, ROBOT_FRAME, ARUCO_FRAME}
 
 HOME_Y = -0.5
@@ -123,6 +123,8 @@ class PoseServer(HelloNode):
             target_in_robot_frame = self.tf2_buffer.transform(
                 target_point, ROBOT_FRAME, timeout=Duration(seconds=1)
             )
+
+            self.get_logger().info(f"Target in robot_frame: {target_in_robot_frame}")
         except Exception as e:
             feedback.status = "Unable to get target pose."
             goal_handle.publish_feedback(feedback)
