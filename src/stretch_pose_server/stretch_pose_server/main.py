@@ -80,7 +80,7 @@ class PoseServer(HelloNode):
                 return response
 
             # Manually remove x-axis from robot frame.
-            tf_robot.transform.translation.x = 0
+            tf_robot.transform.translation.x = 5e-5
 
             response.world_pose = tf_world
             response.robot_pose = tf_robot
