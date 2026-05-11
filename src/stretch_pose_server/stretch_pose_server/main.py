@@ -79,6 +79,9 @@ class PoseServer(HelloNode):
                 response.message = "One or more TF lookups failed."
                 return response
 
+            # Manually remove x-axis from robot frame.
+            tf_robot.transform.translation.x = 0
+
             response.world_pose = tf_world
             response.robot_pose = tf_robot
             response.aruco_pose = tf_aruco
