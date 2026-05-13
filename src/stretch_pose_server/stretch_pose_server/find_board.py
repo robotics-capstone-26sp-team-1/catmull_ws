@@ -1,11 +1,8 @@
 import time
 
-import rclpy
-
 from rclpy import spin
 
 from hello_helpers.hello_misc import HelloNode
-
 
 ARUCO_FRAME = "column_4"
 
@@ -35,43 +32,22 @@ class FindBoard(HelloNode):
         #
         self.move_to_pose(
             {
-                "joint_head_tilt": -0.6
+                "joint_head_tilt": -0.3
             },
             blocking=True
         )
 
         #
-        # Full sweep across a large range
+        # Full sweep across the full range
         # using smaller increments.
         #
-        search_angles = [
-            -3.0,
-            -2.5,
-            -2.0,
-            -1.5,
-            -1.0,
-            -0.5,
-            0.0,
-            0.5,
-            1.0,
-            1.5,
-            2.0,
-            2.5,
-            3.0,
-            2.5,
-            2.0,
-            1.5,
-            1.0,
-            0.5,
-            0.0,
-            -0.5,
-            -1.0,
-            -1.5,
-            -2.0,
-            -2.5,
-        ]
+        search_angles = [-4 + i * (6 / 32) for i in range(32)]
+        found = False
 
-        while rclpy.ok():
+        while not found:
+            self.get_logger().info(
+                "Board not found yet..."
+            )
 
             for angle in search_angles:
 
@@ -101,7 +77,6 @@ class FindBoard(HelloNode):
                 )
 
                 if tf is not None:
-
                     self.get_logger().info(
                         "Found Connect Four board!"
                     )
@@ -120,30 +95,13 @@ class FindBoard(HelloNode):
                         "Stopping search node."
                     )
 
-                    rclpy.shutdown()
-
-                    return
-
-                self.get_logger().info(
-                    "Board not found yet..."
-                )
+                    found = True
+                    break
 
 
 def main():
-
-    rclpy.init()
-
     node = FindBoard()
-
     node.main()
-
-    try:
-        spin(node)
-
-    except KeyboardInterrupt:
-        pass
-
-    node.destroy_node()
 
 
 if __name__ == "__main__":
