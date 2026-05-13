@@ -41,17 +41,34 @@ class FindBoard(HelloNode):
         )
 
         #
-        # Sweep left/right with head pan.
+        # Full sweep across a large range
+        # using smaller increments.
         #
         search_angles = [
+            -3.0,
+            -2.5,
+            -2.0,
+            -1.5,
             -1.0,
             -0.5,
             0.0,
             0.5,
             1.0,
+            1.5,
+            2.0,
+            2.5,
+            3.0,
+            2.5,
+            2.0,
+            1.5,
+            1.0,
             0.5,
             0.0,
             -0.5,
+            -1.0,
+            -1.5,
+            -2.0,
+            -2.5,
         ]
 
         while rclpy.ok():
@@ -72,7 +89,7 @@ class FindBoard(HelloNode):
                 #
                 # Allow TF time to update.
                 #
-                time.sleep(1.5)
+                time.sleep(1.0)
 
                 #
                 # Check whether the board
@@ -89,6 +106,22 @@ class FindBoard(HelloNode):
                         "Found Connect Four board!"
                     )
 
+                    #
+                    # Center head slightly after detection.
+                    #
+                    self.move_to_pose(
+                        {
+                            "joint_head_pan": angle
+                        },
+                        blocking=True
+                    )
+
+                    self.get_logger().info(
+                        "Stopping search node."
+                    )
+
+                    rclpy.shutdown()
+
                     return
 
                 self.get_logger().info(
@@ -98,11 +131,19 @@ class FindBoard(HelloNode):
 
 def main():
 
+    rclpy.init()
+
     node = FindBoard()
 
     node.main()
 
-    spin(node)
+    try:
+        spin(node)
+
+    except KeyboardInterrupt:
+        pass
+
+    node.destroy_node()
 
 
 if __name__ == "__main__":
