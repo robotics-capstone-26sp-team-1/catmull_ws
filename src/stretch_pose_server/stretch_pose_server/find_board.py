@@ -123,7 +123,7 @@ class FindBoard(HelloNode):
         R = quaternion_matrix((x, y, z, w))
 
         # Apply rotation to the offset vector
-        P_dash = np.array([[0], [0], [self.offset], [1]])
+        P_dash = np.array([[0], [0], [0.75], [1]])
         P = np.array(
             [
                 [board_transform.transform.translation.x],
