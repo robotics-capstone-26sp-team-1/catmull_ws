@@ -85,27 +85,13 @@ class FindBoard(HelloNode):
                 # marker exists.
                 #
                 tf = self.get_tf(
-                    "base_link",
+                    ROBOT_FRAME,
                     ARUCO_FRAME
                 )
 
                 if tf is not None:
                     self.get_logger().info(
                         "Found Connect Four board!"
-                    )
-
-                    #
-                    # Center head slightly after detection.
-                    #
-                    self.move_to_pose(
-                        {
-                            "joint_head_pan": angle
-                        },
-                        blocking=True
-                    )
-
-                    self.get_logger().info(
-                        "Stopping search node."
                     )
 
                     return tf
@@ -150,7 +136,7 @@ class FindBoard(HelloNode):
         # Calculate final rotation: -phi (cancel rotation needed to align),
         # + z_rot_base (original marker rotation),
         # + pi (such that the base and the marker axis are aligned as shown in tutorial)
-        z_rot_base = -phi + z_rot_base + np.pi
+        final_z_rot_base = -phi + z_rot_base + np.pi
 
         # Rotate to board.
         self.move_to_pose({"rotate_mobile_base": phi}, blocking=True)
@@ -159,7 +145,7 @@ class FindBoard(HelloNode):
         self.move_to_pose({"translate_mobile_base": dist}, blocking=True)
 
         # Counter Rotate to face board.
-        self.move_to_pose({"rotate_mobile_base": z_rot_base}, blocking=True)
+        self.move_to_pose({"rotate_mobile_base": final_z_rot_base}, blocking=True)
 
 
 def main():

@@ -11,6 +11,7 @@
   <depend>hello_helpers</depend>
   <depend>geometry_msgs</depend>
   <depend>tf2_geometry_msgs</depend>
+  <depend>tf_transformations</depend>
   <depend>stretch_pose_interfaces</depend>
 
   <test_depend>ament_copyright</test_depend>
