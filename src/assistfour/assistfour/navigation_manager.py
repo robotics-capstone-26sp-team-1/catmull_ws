@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from geometry_msgs.msg import Twist
 
 if TYPE_CHECKING:
-    from assistfour.main import Main
+    from .main import Main
 
 
 class NavigationManager:

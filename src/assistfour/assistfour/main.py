@@ -1,7 +1,7 @@
 from geometry_msgs.msg import Twist
 from hello_helpers.hello_misc import HelloNode
 
-from assistfour.navigation_manager import NavigationManager
+from .navigation_manager import NavigationManager
 
 
 class Main(HelloNode):
