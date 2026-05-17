@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import threading
+from math import atan2, pi
 from typing import TYPE_CHECKING
 from geometry_msgs.msg import Twist
+
+from .constants import ROBOT_FRAME, SEARCH_SPIN_RATE, MARKER_SEARCH_RATE, MINIMUM_ANGLE_THRESHOLD
 
 if TYPE_CHECKING:
     from .main import Main
@@ -9,17 +13,58 @@ if TYPE_CHECKING:
 
 class NavigationManager:
     def __init__(self, node: Main):
-        self.node = node
+        self._node = node
+
+        # Marker searching.
+        self._search_spin_loop = None
+        self._search_loop = None
+        self._angle_to_marker = pi
 
     def search_for_marker(self, name: str):
         # Stow for safety.
-        self.node.stow_the_robot()
+        self._node.stow_the_robot()
+
+        # Look down slightly (markers are lower than head).
+        self._node.move_to_pose({"joint_head_tilt": -0.3}, blocking=True)
 
         # Switch to nav mode.
-        self.node.switch_to_navigation_mode()
+        self._node.switch_to_navigation_mode()
 
-        # Begin spinning.
-        command = Twist()
-        command.angular.z = 0.2
+        # Define spin loop.
+        def spin():
+            # Define velocity command.
+            command = Twist()
 
-        self.node.vel_publisher.publish(command)
+            # Clamp rate to spin speed.
+            rate = min(self._angle_to_marker, SEARCH_SPIN_RATE)
+
+            # Round to 0 when within threshold.
+            if self._angle_to_marker < MINIMUM_ANGLE_THRESHOLD:
+                rate = 0
+                self._search_spin_loop.cancel()
+                self._search_spin_loop.destroy()
+                self._search_loop.cancel()
+                self._search_loop.destry()
+                self._node.get_logger().info("Aligned to marker.")
+
+            # Send command.
+            command.angular.z = rate
+            self._node.vel_publisher.publish(command)
+
+        # Define search loop.
+        def search():
+            # Try to find marker.
+            tf = self._node.get_tf(ROBOT_FRAME, name)
+
+            # Set speed as a function of angle to marker.
+            if tf is not None:
+                self._angle_to_marker = atan2(tf.transform.translation.y, tf.transform.translation.x)
+            else:
+                # Set it to be larger than the spin rate.
+                self._angle_to_marker = pi
+
+        # Do spin.
+        self._search_spin_loop = self._node.create_timer(MARKER_SEARCH_RATE, spin)
+
+        # Do search.
+        self._search_loop = self._node.create_timer(MARKER_SEARCH_RATE, search)

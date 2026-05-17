@@ -1,6 +1,7 @@
 from geometry_msgs.msg import Twist
 from hello_helpers.hello_misc import HelloNode
 
+from .constants import COLUMN_4_FRAME
 from .navigation_manager import NavigationManager
 
 
@@ -16,7 +17,7 @@ class Main(HelloNode):
         # Initialize components.
         self.vel_publisher = self.create_publisher(Twist, '/stretch/cmd_vel', 10)
 
-        self.navigation_manager.search_for_marker("hello")
+        self.navigation_manager.search_for_marker(COLUMN_4_FRAME)
 
 
 def main():
