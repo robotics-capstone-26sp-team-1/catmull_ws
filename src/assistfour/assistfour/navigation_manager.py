@@ -5,7 +5,7 @@ from math import atan2, pi
 from typing import TYPE_CHECKING
 from geometry_msgs.msg import Twist
 
-from .constants import ROBOT_FRAME, SEARCH_SPIN_RATE, MARKER_SEARCH_RATE, MINIMUM_ANGLE_THRESHOLD
+from .constants import ROBOT_FRAME, SEARCH_SPIN_RATE, MARKER_SEARCH_PERIOD, MINIMUM_ANGLE_THRESHOLD
 
 if TYPE_CHECKING:
     from rclpy.timer import Timer
@@ -82,7 +82,7 @@ class NavigationManager:
         self._search_stop_event.clear()
 
         # Do spin.
-        self._search_spin_loop = self._node.create_timer(MARKER_SEARCH_RATE, spin)
+        self._search_spin_loop = self._node.create_timer(MARKER_SEARCH_PERIOD, spin)
 
         # Do search (non-blocking for executor/timers).
         Thread(target=search, daemon=True).start()

@@ -10,9 +10,9 @@ COLUMN_5_FRAME = "column_5"
 COLUMN_6_FRAME = "column_6"
 COLUMN_7_FRAME = "column_7"
 
-# Rates
-SEARCH_SPIN_RATE = 2.0  # <= Pi
-MARKER_SEARCH_RATE = 0.5  # >= 2 Hz (0.5 sec)
+# Rates.
+SEARCH_SPIN_RATE = 2.0  # rad / sec; must be <= Pi
+MARKER_SEARCH_PERIOD = 0.5  # seconds (2 Hz); must be >= 2 Hz (<= 0.5 sec)
 
 # Minimums
 MINIMUM_ANGLE_THRESHOLD = 0.02
