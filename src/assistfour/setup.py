@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'main = assistfour.main:main',
             'spin = assistfour.spin:main',
         ],
     },

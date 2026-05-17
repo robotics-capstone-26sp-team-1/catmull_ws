@@ -6,6 +6,8 @@
       <sourceFolder url="file://$MODULE_DIR$/install/stretch_pose_server/lib/python3.10/site-packages" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/build/stretch_pose_server" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/build/assistfour" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/assistfour" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.10 (catmull_ws)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
