@@ -17,7 +17,9 @@ class NavigationManager:
 
         # Marker searching.
         self._search_spin_loop = None
-        self._search_loop = None
+        self._search_thread = None
+        self._search_stop_event = threading.Event()
+        self._angle_lock = threading.Lock()
         self._angle_to_marker = pi
 
     def search_for_marker(self, name: str):
@@ -36,35 +38,44 @@ class NavigationManager:
             command = Twist()
 
             # Clamp rate to spin speed.
-            rate = min(self._angle_to_marker, SEARCH_SPIN_RATE)
+            with self._angle_lock:
+                angle_to_marker = self._angle_to_marker
+            rate = max(-SEARCH_SPIN_RATE, min(angle_to_marker, SEARCH_SPIN_RATE))
 
             # Round to 0 when within threshold.
-            if self._angle_to_marker < MINIMUM_ANGLE_THRESHOLD:
-                rate = 0
-                self._search_spin_loop.cancel()
+            if abs(angle_to_marker) < MINIMUM_ANGLE_THRESHOLD:
+                rate = 0.0
+                self._search_stop_event.set()
                 self._search_spin_loop.destroy()
-                self._search_loop.cancel()
-                self._search_loop.destry()
                 self._node.get_logger().info("Aligned to marker.")
 
             # Send command.
             command.angular.z = rate
             self._node.vel_publisher.publish(command)
 
-        # Define search loop.
+        # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
         def search():
-            # Try to find marker.
-            tf = self._node.get_tf(ROBOT_FRAME, name)
+            while not self._search_stop_event.is_set():
+                # Try to find marker.
+                tf = self._node.get_tf(ROBOT_FRAME, name)
 
-            # Set speed as a function of angle to marker.
-            if tf is not None:
-                self._angle_to_marker = atan2(tf.transform.translation.y, tf.transform.translation.x)
-            else:
-                # Set it to be larger than the spin rate.
-                self._angle_to_marker = pi
+                # Set speed as a function of angle to marker.
+                with self._angle_lock:
+                    if tf is not None:
+                        self._angle_to_marker = atan2(
+                            tf.transform.translation.y,
+                            tf.transform.translation.x,
+                        )
+                    else:
+                        # Set it to be larger than the spin rate.
+                        self._angle_to_marker = pi
+
+        # Reset search state for a fresh run.
+        self._search_stop_event.clear()
 
         # Do spin.
         self._search_spin_loop = self._node.create_timer(MARKER_SEARCH_RATE, spin)
 
-        # Do search.
-        self._search_loop = self._node.create_timer(MARKER_SEARCH_RATE, search)
+        # Do search (non-blocking for executor/timers).
+        self._search_thread = threading.Thread(target=search, daemon=True)
+        self._search_thread.start()

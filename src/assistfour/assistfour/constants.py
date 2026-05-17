@@ -11,8 +11,8 @@ COLUMN_6_FRAME = "column_6"
 COLUMN_7_FRAME = "column_7"
 
 # Rates
-SEARCH_SPIN_RATE = 0.5  # Must be less than Pi
-MARKER_SEARCH_RATE = 0.5
+SEARCH_SPIN_RATE = 1.0  # <= Pi
+MARKER_SEARCH_RATE = 0.5  # >= 2 Hz (0.5 sec)
 
 # Minimums
 MINIMUM_ANGLE_THRESHOLD = 0.02
