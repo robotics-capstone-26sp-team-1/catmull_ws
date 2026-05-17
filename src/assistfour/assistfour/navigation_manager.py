@@ -4,6 +4,8 @@ from threading import Event, Lock, Thread
 from math import atan2, pi
 from typing import TYPE_CHECKING
 from geometry_msgs.msg import Twist
+from tf_transformations import euler_from_quaternion, quaternion_matrix
+from numpy import array, matmul
 
 from .constants import ROBOT_FRAME, SEARCH_SPIN_RATE, MARKER_SEARCH_PERIOD, MINIMUM_ANGLE_THRESHOLD
 
@@ -22,7 +24,7 @@ class NavigationManager:
         self._angle_lock = Lock()
         self._angle_to_marker = pi
 
-    def search_for_marker(self, name: str, clockwise: bool):
+    def point_at_marker(self, name: str, clockwise: bool, forward_offset: float):
         # Stow for safety.
         self._node.stow_the_robot()
 
@@ -67,13 +69,35 @@ class NavigationManager:
                 # Try to find marker.
                 tf = self._node.get_tf(ROBOT_FRAME, name)
 
-                # Set speed as a function of angle to marker.
+                # Compute angle to marker.
                 with self._angle_lock:
                     if tf is not None:
-                        self._angle_to_marker = atan2(
-                            tf.transform.translation.y,
-                            tf.transform.translation.x,
-                        )
+                        # Directly set angle to marker if no offset.
+                        if forward_offset == 0.0:
+                            self._angle_to_marker = atan2(
+                                tf.transform.translation.y,
+                                tf.transform.translation.x,
+                            )
+                            self._node.get_logger().info(f"{self._angle_to_marker} radians from marker.")
+                        else:
+                            # Compute offset from marker.
+                            rotation_matrix = quaternion_matrix((
+                                tf.transform.rotation.x,
+                                tf.transform.rotation.y,
+                                tf.transform.rotation.z,
+                                tf.transform.rotation.w,
+                            ))
+                            offset_vector = array([[0], [0], [forward_offset], [1]])
+                            marker_vector = array(
+                                [[tf.transform.translation.x], [tf.transform.translation.y], [0], [1]])
+                            offset_direction = matmul(rotation_matrix, offset_vector)
+                            final_location = offset_direction + marker_vector
+                            final_x = final_location[0, 0]
+                            final_y = final_location[1, 0]
+
+                            # Set angle to offset position.
+                            self._angle_to_marker = atan2(final_y, final_x)
+
                     else:
                         # Set it to be larger than the spin rate.
                         self._angle_to_marker = pi

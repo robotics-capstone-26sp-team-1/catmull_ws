@@ -3,7 +3,7 @@ from __future__ import annotations
 from geometry_msgs.msg import Twist
 from hello_helpers.hello_misc import HelloNode
 
-from .constants import COLUMN_4_FRAME
+from .constants import COLUMN_4_FRAME, COLUMN_1_FRAME, COLUMN_7_FRAME
 from .navigation_manager import NavigationManager
 from typing import TYPE_CHECKING
 
@@ -27,7 +27,7 @@ class Main(HelloNode):
         # Initialize ROS components.
         self.vel_publisher = self.create_publisher(Twist, '/stretch/cmd_vel', 10)
 
-        self.navigation_manager.search_for_marker(COLUMN_4_FRAME, False)
+        self.navigation_manager.point_at_marker(COLUMN_1_FRAME, True, 0)
 
 
 def main():
