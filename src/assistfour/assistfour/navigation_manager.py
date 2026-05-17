@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import threading
+from threading import Event, Lock, Thread
 from math import atan2, pi
 from typing import TYPE_CHECKING
 from geometry_msgs.msg import Twist
@@ -8,6 +8,7 @@ from geometry_msgs.msg import Twist
 from .constants import ROBOT_FRAME, SEARCH_SPIN_RATE, MARKER_SEARCH_RATE, MINIMUM_ANGLE_THRESHOLD
 
 if TYPE_CHECKING:
+    from rclpy.timer import Timer
     from .main import Main
 
 
@@ -16,13 +17,12 @@ class NavigationManager:
         self._node = node
 
         # Marker searching.
-        self._search_spin_loop = None
-        self._search_thread = None
-        self._search_stop_event = threading.Event()
-        self._angle_lock = threading.Lock()
+        self._search_spin_loop: Timer | None = None
+        self._search_stop_event = Event()
+        self._angle_lock = Lock()
         self._angle_to_marker = pi
 
-    def search_for_marker(self, name: str):
+    def search_for_marker(self, name: str, clockwise: bool):
         # Stow for safety.
         self._node.stow_the_robot()
 
@@ -34,13 +34,21 @@ class NavigationManager:
 
         # Define spin loop.
         def spin():
+            # Exit if spin loop is not running or publisher is not ready.
+            if self._search_spin_loop is None or self._node.vel_publisher is None:
+                return
+
             # Define velocity command.
             command = Twist()
 
             # Clamp rate to spin speed and double angle rate to converge faster.
             with self._angle_lock:
                 angle_to_marker = self._angle_to_marker
-            rate = max(-SEARCH_SPIN_RATE, min(angle_to_marker * 2, SEARCH_SPIN_RATE))
+            rate = min(angle_to_marker * 2, SEARCH_SPIN_RATE)
+
+            # Apply direction.
+            if clockwise:
+                rate = -rate
 
             # Round to 0 when within threshold.
             if abs(angle_to_marker) < MINIMUM_ANGLE_THRESHOLD:
@@ -77,5 +85,4 @@ class NavigationManager:
         self._search_spin_loop = self._node.create_timer(MARKER_SEARCH_RATE, spin)
 
         # Do search (non-blocking for executor/timers).
-        self._search_thread = threading.Thread(target=search, daemon=True)
-        self._search_thread.start()
+        Thread(target=search, daemon=True).start()
