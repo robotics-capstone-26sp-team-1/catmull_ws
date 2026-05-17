@@ -37,10 +37,10 @@ class NavigationManager:
             # Define velocity command.
             command = Twist()
 
-            # Clamp rate to spin speed.
+            # Clamp rate to spin speed and double angle rate to converge faster.
             with self._angle_lock:
                 angle_to_marker = self._angle_to_marker
-            rate = max(-SEARCH_SPIN_RATE, min(angle_to_marker, SEARCH_SPIN_RATE))
+            rate = max(-SEARCH_SPIN_RATE, min(angle_to_marker * 2, SEARCH_SPIN_RATE))
 
             # Round to 0 when within threshold.
             if abs(angle_to_marker) < MINIMUM_ANGLE_THRESHOLD:
