@@ -30,8 +30,9 @@ class Main(HelloNode):
         # Initialize ROS components.
         self.vel_publisher = self.create_publisher(Twist, '/stretch/cmd_vel', 10)
 
-        self.navigation_manager.enter_travel_pose()
-        self.get_logger().info("At travel pose.")
+        self.navigation_manager.point_at_marker(FEEDER_FRAME, True, 0.75)
+        self.navigation_manager.drive_to_point(FEEDER_FRAME, 0.75)
+        self.get_logger().info("Arrived at feeder.")
 
 
 def main():
