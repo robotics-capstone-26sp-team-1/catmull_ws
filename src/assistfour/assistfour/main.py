@@ -27,7 +27,7 @@ class Main(HelloNode):
         # Initialize ROS components.
         self.vel_publisher = self.create_publisher(Twist, '/stretch/cmd_vel', 10)
 
-        self.navigation_manager.point_at_marker(COLUMN_1_FRAME, True, 0)
+        self.navigation_manager.point_at_marker(COLUMN_1_FRAME, True, 0.75)
 
 
 def main():

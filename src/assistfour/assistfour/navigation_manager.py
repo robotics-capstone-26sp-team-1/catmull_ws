@@ -43,14 +43,14 @@ class NavigationManager:
             # Define velocity command.
             command = Twist()
 
-            # Clamp rate to spin speed and double angle rate to converge faster.
+            # Clamp rate to spin speed (with direction).
             with self._angle_lock:
                 angle_to_marker = self._angle_to_marker
-            rate = min(angle_to_marker * 2, SEARCH_SPIN_RATE)
 
-            # Apply direction.
-            if clockwise:
-                rate = -rate
+            if abs(angle_to_marker) > SEARCH_SPIN_RATE:
+                rate = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
+            else:
+                rate = angle_to_marker
 
             # Round to 0 when within threshold.
             if abs(angle_to_marker) < MINIMUM_ANGLE_THRESHOLD:
@@ -61,6 +61,7 @@ class NavigationManager:
 
             # Send command.
             command.angular.z = rate
+            self._node.get_logger().info(f"Setting rate: {rate} rad/sec.")
             self._node.vel_publisher.publish(command)
 
         # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
@@ -78,7 +79,6 @@ class NavigationManager:
                                 tf.transform.translation.y,
                                 tf.transform.translation.x,
                             )
-                            self._node.get_logger().info(f"{self._angle_to_marker} radians from marker.")
                         else:
                             # Compute offset from marker.
                             rotation_matrix = quaternion_matrix((
