@@ -24,11 +24,14 @@ class Main(HelloNode):
     def main(self, **kwargs):
         HelloNode.main(self, "main", "main", wait_for_first_pointcloud=False)
 
+        # Ensure in position mode.
+        self.switch_to_position_mode()
+
         # Initialize ROS components.
         self.vel_publisher = self.create_publisher(Twist, '/stretch/cmd_vel', 10)
 
-        self.navigation_manager.point_at_marker(FEEDER_FRAME, True, 0.75)
-        self.get_logger().info("Aligned to feeder!")
+        self.navigation_manager.enter_travel_pose()
+        self.get_logger().info("At travel pose.")
 
 
 def main():

@@ -25,8 +25,8 @@ class NavigationManager:
         self._angle_to_marker = pi
 
     def point_at_marker(self, name: str, clockwise: bool, forward_offset: float):
-        # Stow for safety.
-        self._node.stow_the_robot()
+        # Enter travel pose.
+        self.enter_travel_pose()
 
         # Look down slightly (markers are lower than head).
         self._node.move_to_pose({"joint_head_tilt": -0.3}, blocking=True)
@@ -114,3 +114,17 @@ class NavigationManager:
 
         # Wait for search to complete.
         search_thread.join()
+
+        # Switch back to pos mode.
+        self._node.switch_to_position_mode()
+
+    def enter_travel_pose(self):
+        self._node.move_to_pose({
+            "joint_head_tilt": 0.0,
+            "joint_wrist_pitch": -1.6,
+            "joint_wrist_roll": 0.0,
+            "joint_wrist_yaw": 0.0,
+            "joint_head_pan": 0.0,
+            "joint_lift": 0.45,
+            "joint_arm": 0.0
+        }, blocking=True)
