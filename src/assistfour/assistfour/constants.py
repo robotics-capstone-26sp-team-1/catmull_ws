@@ -15,4 +15,4 @@ SEARCH_SPIN_RATE = 1.5  # rad / sec; must be <= Pi
 MARKER_SEARCH_PERIOD = 0.5  # seconds (2 Hz); must be >= 2 Hz (<= 0.5 sec)
 
 # Minimums
-MINIMUM_ANGLE_THRESHOLD = 0.02
+MINIMUM_ANGLE_THRESHOLD = 0.05
