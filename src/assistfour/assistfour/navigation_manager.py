@@ -98,7 +98,9 @@ class NavigationManager:
                             )
                         else:
                             # Compute offset from marker.
-                            final_x, final_y = self._target_xy_from_tf(tf, forward_offset)
+                            final_x, final_y = self._target_xy_from_tf(
+                                tf, forward_offset
+                            )
 
                             # Set angle to offset position.
                             self._angle_to_marker = atan2(final_y, final_x)
@@ -199,15 +201,18 @@ class NavigationManager:
         self._node.switch_to_position_mode()
 
     def enter_travel_pose(self):
-        self._node.move_to_pose({
-            "joint_head_tilt": 0.0,
-            "joint_wrist_pitch": -1.6,
-            "joint_wrist_roll": 0.0,
-            "joint_wrist_yaw": 0.0,
-            "joint_head_pan": 0.0,
-            "joint_lift": 0.45,
-            "joint_arm": 0.0
-        }, blocking=True)
+        self._node.move_to_pose(
+            {
+                "joint_head_tilt": 0.0,
+                "joint_wrist_pitch": -1.6,
+                "joint_wrist_roll": 0.0,
+                "joint_wrist_yaw": 0.0,
+                "joint_head_pan": 0.0,
+                "joint_lift": 0.45,
+                "joint_arm": 0.0,
+            },
+            blocking=True,
+        )
 
     @staticmethod
     def _target_xy_from_tf(tf, forward_offset: float) -> tuple[float, float]:
@@ -215,15 +220,18 @@ class NavigationManager:
         if forward_offset == 0.0:
             return tf.transform.translation.x, tf.transform.translation.y
 
-        rotation_matrix = quaternion_matrix((
-            tf.transform.rotation.x,
-            tf.transform.rotation.y,
-            tf.transform.rotation.z,
-            tf.transform.rotation.w,
-        ))
+        rotation_matrix = quaternion_matrix(
+            (
+                tf.transform.rotation.x,
+                tf.transform.rotation.y,
+                tf.transform.rotation.z,
+                tf.transform.rotation.w,
+            )
+        )
         offset_vector = array([[0], [0], [forward_offset], [1]])
         marker_vector = array(
-            [[tf.transform.translation.x], [tf.transform.translation.y], [0], [1]])
+            [[tf.transform.translation.x], [tf.transform.translation.y], [0], [1]]
+        )
         offset_direction = matmul(rotation_matrix, offset_vector)
         final_location = offset_direction + marker_vector
         return float(final_location[0, 0]), float(final_location[1, 0])
