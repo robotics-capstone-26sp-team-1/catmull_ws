@@ -3,7 +3,7 @@ from __future__ import annotations
 from geometry_msgs.msg import Twist
 from hello_helpers.hello_misc import HelloNode
 
-from .constants import COLUMN_4_FRAME
+from .constants import FEEDER_FRAME
 from .navigation_manager import NavigationManager
 from typing import TYPE_CHECKING
 
@@ -24,10 +24,15 @@ class Main(HelloNode):
     def main(self, **kwargs):
         HelloNode.main(self, "main", "main", wait_for_first_pointcloud=False)
 
-        # Initialize ROS components.
-        self.vel_publisher = self.create_publisher(Twist, '/stretch/cmd_vel', 10)
+        # Ensure in position mode.
+        self.switch_to_position_mode()
 
-        self.navigation_manager.search_for_marker(COLUMN_4_FRAME, False)
+        # Initialize ROS components.
+        self.vel_publisher = self.create_publisher(Twist, "/stretch/cmd_vel", 10)
+
+        self.navigation_manager.point_at_marker(FEEDER_FRAME, True, 0.75)
+        self.navigation_manager.drive_to_point(FEEDER_FRAME, 0.75)
+        self.get_logger().info("Motion complete.")
 
 
 def main():
@@ -40,5 +45,5 @@ def main():
         assistfour.destroy_node()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
