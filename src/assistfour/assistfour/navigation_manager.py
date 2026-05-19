@@ -44,7 +44,7 @@ class NavigationManager:
         # Look down slightly (markers are lower than head).
         self._node.move_to_pose({"joint_head_tilt": -0.3}, blocking=True)
 
-        # Switch to nav mode.
+        # Switch to navigation mode.
         self._node.switch_to_navigation_mode()
 
         # Assume marker is not found.
@@ -119,7 +119,7 @@ class NavigationManager:
         # Wait for search to complete.
         search_thread.join()
 
-        # Switch back to pos mode.
+        # Switch back to position mode.
         self._node.switch_to_position_mode()
 
     def drive_to_point(self, name: str, forward_offset: float):
@@ -129,7 +129,7 @@ class NavigationManager:
         # Look down slightly (markers are lower than head).
         self._node.move_to_pose({"joint_head_tilt": -0.6}, blocking=True)
 
-        # Switch to nav mode.
+        # Switch to navigation mode.
         self._node.switch_to_navigation_mode()
 
         # Assume we are far away from target.
