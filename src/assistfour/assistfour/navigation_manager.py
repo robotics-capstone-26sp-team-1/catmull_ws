@@ -91,20 +91,13 @@ class NavigationManager:
                 # Compute angle to marker.
                 with self._angle_lock:
                     if tf is not None:
-                        # Directly set angle to marker if no offset.
-                        if forward_offset == 0.0:
-                            self._angle_to_marker = atan2(
-                                tf.transform.translation.y,
-                                tf.transform.translation.x,
-                            )
-                        else:
-                            # Compute offset from marker.
-                            final_x, final_y = self._target_xy_from_tf(
-                                tf, forward_offset
-                            )
+                        # Compute offset from marker.
+                        final_x, final_y = self._target_xy_from_tf(
+                            tf, forward_offset
+                        )
 
-                            # Set angle to offset position.
-                            self._angle_to_marker = atan2(final_y, final_x)
+                        # Set angle to offset position.
+                        self._angle_to_marker = atan2(final_y, final_x)
                     else:
                         # Set it to be larger than the spin rate.
                         self._angle_to_marker = pi
@@ -151,14 +144,15 @@ class NavigationManager:
             # Define velocity command.
             command = Twist()
 
+            # Pull last known distance to target.
+            with self._point_lock:
+                point_distance_to_target = self._point_distance_to_target
+
             # Switch drive based on recovery.
             if self._in_drive_recovery:
                 command.linear.x = -MAX_FORWARD_SPEED
             else:
                 # Clamp rate to drive speed.
-                with self._point_lock:
-                    point_distance_to_target = self._point_distance_to_target
-
                 rate = min(MAX_FORWARD_SPEED, point_distance_to_target)
 
                 # Round to 0 when within threshold.
@@ -172,7 +166,8 @@ class NavigationManager:
                 command.linear.x = rate
 
             # Send command.
-            self._node.get_logger().info(f"Setting rate: {command.linear.x} m/sec.")
+            self._node.get_logger().info(
+                f"Setting rate: {command.linear.x} m/sec. Last known distance to target: {point_distance_to_target}")
             self._node.vel_publisher.publish(command)
 
         # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
@@ -219,17 +214,16 @@ class NavigationManager:
 
         # If finished in recovery mode, complete rest of drive using absolute positioning.
         if self._in_drive_recovery:
+            self._node.get_logger().info("Completing recovery drive.")
             self._node.move_to_pose({"translate_mobile_base": self._point_distance_to_target}, blocking=True)
             self._in_drive_recovery = False
 
     def enter_travel_pose(self):
         self._node.move_to_pose(
             {
-                "joint_head_tilt": 0.0,
                 "joint_wrist_pitch": -1.6,
                 "joint_wrist_roll": 0.0,
                 "joint_wrist_yaw": 0.0,
-                "joint_head_pan": 0.0,
                 "joint_lift": 0.45,
                 "joint_arm": 0.0,
             },
@@ -239,7 +233,7 @@ class NavigationManager:
     @staticmethod
     def _target_xy_from_tf(tf, forward_offset: float) -> tuple[float, float]:
         # Compute the target point in the robot frame after applying the marker offset.
-        if forward_offset == 0.0:
+        if forward_offset == 0:
             return tf.transform.translation.x, tf.transform.translation.y
 
         rotation_matrix = quaternion_matrix(

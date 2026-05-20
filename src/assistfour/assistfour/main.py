@@ -5,6 +5,7 @@ from hello_helpers.hello_misc import HelloNode
 
 from .constants import FEEDER_FRAME
 from .navigation_manager import NavigationManager
+from math import radians
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -30,8 +31,11 @@ class Main(HelloNode):
         # Initialize ROS components.
         self.vel_publisher = self.create_publisher(Twist, "/stretch/cmd_vel", 10)
 
-        self.navigation_manager.point_at_marker(FEEDER_FRAME, True, 0.75)
-        self.navigation_manager.drive_to_point(FEEDER_FRAME, 0.75)
+        # Demo finding feeder and orienting to it.
+        self.navigation_manager.point_at_marker(FEEDER_FRAME, True, 1)
+        self.navigation_manager.drive_to_point(FEEDER_FRAME, 1)
+        self.move_to_pose({"joint_head_pan": radians(-90)}, blocking=True)
+        self.navigation_manager.point_at_marker(FEEDER_FRAME, False, 0)
         self.get_logger().info("Motion complete.")
 
 
