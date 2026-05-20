@@ -36,6 +36,7 @@ class NavigationManager:
         self._point_stop_event = Event()
         self._point_lock = Lock()
         self._point_distance_to_target = inf
+        self._in_drive_recovery = False
 
     def point_at_marker(self, name: str, clockwise: bool, forward_offset: float):
         # Enter travel pose.
@@ -131,6 +132,10 @@ class NavigationManager:
         # Look down slightly (markers are lower than head).
         self._node.move_to_pose({"joint_head_tilt": -0.6}, blocking=True)
 
+        # Verify marker can be found.
+        if self._node.get_tf(ROBOT_FRAME, name) is None:
+            raise ValueError("Marker not found. Unable to drive to point.")
+
         # Switch to navigation mode.
         self._node.switch_to_navigation_mode()
 
@@ -146,24 +151,28 @@ class NavigationManager:
             # Define velocity command.
             command = Twist()
 
-            # Clamp rate to drive speed.
-            with self._point_lock:
-                point_distance_to_target = self._point_distance_to_target
+            # Switch drive based on recovery.
+            if self._in_drive_recovery:
+                command.linear.x = -MAX_FORWARD_SPEED
+            else:
+                # Clamp rate to drive speed.
+                with self._point_lock:
+                    point_distance_to_target = self._point_distance_to_target
 
-            rate = min(MAX_FORWARD_SPEED, point_distance_to_target)
+                rate = min(MAX_FORWARD_SPEED, point_distance_to_target)
 
-            # Round to 0 when within threshold.
-            if point_distance_to_target < MINIMUM_FORWARD_DISTANCE_THRESHOLD:
-                self._point_stop_event.set()
-                self._point_drive_loop.destroy()
-                self._node.stop_the_robot()
-                self._node.get_logger().info("Reached target point.")
-                return
+                # Round to 0 when within threshold.
+                if point_distance_to_target < MINIMUM_FORWARD_DISTANCE_THRESHOLD:
+                    self._point_stop_event.set()
+                    self._point_drive_loop.destroy()
+                    self._node.stop_the_robot()
+                    self._node.get_logger().info("Reached target point.")
+                    return
 
-            command.linear.x = rate
+                command.linear.x = rate
 
             # Send command.
-            self._node.get_logger().info(f"Setting rate: {rate} m/sec.")
+            self._node.get_logger().info(f"Setting rate: {command.linear.x} m/sec.")
             self._node.vel_publisher.publish(command)
 
         # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
@@ -172,17 +181,25 @@ class NavigationManager:
                 # Try to find marker.
                 tf = self._node.get_tf(ROBOT_FRAME, name)
 
-                if tf is None:
+                # Switch to recovery if marker is lost during forward drive.
+                if tf is None and not self._in_drive_recovery:
                     self._node.get_logger().error("Marker has been lost.")
+
+                    # Enable recovery mode.
+                    self._in_drive_recovery = True
+                # Stop if marker is found during recovery.
+                elif tf is not None and self._in_drive_recovery:
+                    self._node.get_logger().info("Recovered marker!")
                     self._point_stop_event.set()
                     if self._point_drive_loop is not None:
                         self._point_drive_loop.destroy()
                     self._node.stop_the_robot()
-                    return
 
-                target_x, target_y = self._target_xy_from_tf(tf, forward_offset)
-                with self._point_lock:
-                    self._point_distance_to_target = max(0.0, target_x)
+                # Update distance to target.
+                if tf is not None:
+                    target_x, target_y = self._target_xy_from_tf(tf, forward_offset)
+                    with self._point_lock:
+                        self._point_distance_to_target = max(0.0, target_x)
 
         # Reset search state for a fresh run.
         self._point_stop_event.clear()
@@ -199,6 +216,11 @@ class NavigationManager:
 
         # Switch back to pos mode.
         self._node.switch_to_position_mode()
+
+        # If finished in recovery mode, complete rest of drive using absolute positioning.
+        if self._in_drive_recovery:
+            self._node.move_to_pose({"translate_mobile_base": self._point_distance_to_target}, blocking=True)
+            self._in_drive_recovery = False
 
     def enter_travel_pose(self):
         self._node.move_to_pose(
