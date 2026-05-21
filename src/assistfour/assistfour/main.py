@@ -33,9 +33,9 @@ class Main(HelloNode):
 
         # Demo finding feeder and orienting to it.
         self.navigation_manager.point_at_marker(FEEDER_FRAME, True, 1)
-        self.navigation_manager.drive_to_point(FEEDER_FRAME, 1)
-        self.move_to_pose({"joint_head_pan": radians(-90)}, blocking=True)
-        self.navigation_manager.point_at_marker(FEEDER_FRAME, False, 0)
+        # self.navigation_manager.drive_to_point(FEEDER_FRAME, 1)
+        # self.move_to_pose({"joint_head_pan": radians(-90)}, blocking=True)
+        # self.navigation_manager.point_at_marker(FEEDER_FRAME, False, 0)
         self.get_logger().info("Motion complete.")
 
 

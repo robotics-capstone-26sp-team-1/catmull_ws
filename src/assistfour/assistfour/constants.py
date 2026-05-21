@@ -11,9 +11,9 @@ COLUMN_6_FRAME = "column_6"
 COLUMN_7_FRAME = "column_7"
 
 # Rates.
-SEARCH_SPIN_RATE = 0.5  # rad / sec; must be <= Pi
+SEARCH_SPIN_RATE = 0.2  # rad / sec; must be <= Pi
 MARKER_SEARCH_PERIOD = 0.5  # seconds (2 Hz); must be >= 2 Hz (<= 0.5 seconds)
-MAX_FORWARD_SPEED = 0.5  # m / sec
+MAX_FORWARD_SPEED = 0.2  # m / sec
 MINIMUM_FORWARD_DISTANCE_THRESHOLD = 0.05  # m
 
 # Minimums

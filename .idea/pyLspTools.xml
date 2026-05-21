@@ -2,5 +2,6 @@
 <project version="4">
   <component name="RuffConfiguration">
     <option name="enabled" value="true" />
+    <option name="sdkName" value="SSH (sftp://hello-robot@slinky:22/usr/bin/python3)" />
   </component>
 </project>

@@ -27,9 +27,7 @@ class NavigationManager:
 
         # Marker searching.
         self._search_spin_loop: Timer | None = None
-        self._search_stop_event = Event()
-        self._angle_lock = Lock()
-        self._angle_to_marker = pi
+        self._marker_found = False
 
         # Drive to point.
         self._point_drive_loop: Timer | None = None
@@ -43,13 +41,10 @@ class NavigationManager:
         self.enter_travel_pose()
 
         # Look down slightly (markers are lower than head).
-        self._node.move_to_pose({"joint_head_tilt": -0.3}, blocking=True)
+        self._node.move_to_pose({"joint_head_tilt": -0.3, "joint_head_pan": 0}, blocking=True)
 
         # Switch to navigation mode.
         self._node.switch_to_navigation_mode()
-
-        # Assume marker is not found.
-        self._angle_to_marker = pi
 
         # Define spin loop.
         def spin():
@@ -57,53 +52,29 @@ class NavigationManager:
             if self._search_spin_loop is None or self._node.vel_publisher is None:
                 return
 
-            # Define velocity command.
-            command = Twist()
-
-            # Clamp rate to spin speed (with direction).
-            with self._angle_lock:
-                angle_to_marker = self._angle_to_marker
-
-            if abs(angle_to_marker) > SEARCH_SPIN_RATE:
-                rate = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
-            else:
-                rate = angle_to_marker
-
-            # Round to 0 when within threshold.
-            if abs(angle_to_marker) < MINIMUM_ANGLE_THRESHOLD:
-                self._search_stop_event.set()
+            # Not found yet.
+            if self._marker_found:
                 self._search_spin_loop.destroy()
                 self._node.stop_the_robot()
-                self._node.get_logger().info("Aligned to marker.")
-                return
-
-            # Send command.
-            command.angular.z = rate
-            self._node.get_logger().info(f"Setting rate: {rate} rad/sec.")
-            self._node.vel_publisher.publish(command)
+                self._node.get_logger().info("Stopping search spin.")
+            else:
+                # Continue spinning.
+                command = Twist()
+                command.angular.z = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
+                self._node.vel_publisher.publish(command)
 
         # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
         def search():
-            while not self._search_stop_event.is_set():
+            while True:
                 # Try to find marker.
                 tf = self._node.get_tf(ROBOT_FRAME, name)
 
-                # Compute angle to marker.
-                with self._angle_lock:
-                    if tf is not None:
-                        # Compute offset from marker.
-                        final_x, final_y = self._target_xy_from_tf(
-                            tf, forward_offset
-                        )
+                if tf is not None:
+                    self._marker_found = True
+                    break
 
-                        # Set angle to offset position.
-                        self._angle_to_marker = atan2(final_y, final_x)
-                    else:
-                        # Set it to be larger than the spin rate.
-                        self._angle_to_marker = pi
-
-        # Reset search state for a fresh run.
-        self._search_stop_event.clear()
+        # Reset search state for the next search.
+        self._marker_found = False
 
         # Do spin.
         self._search_spin_loop = self._node.create_timer(MARKER_SEARCH_PERIOD, spin)

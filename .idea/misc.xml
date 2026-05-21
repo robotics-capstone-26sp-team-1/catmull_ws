@@ -3,4 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.10 (catmull_ws)" />
   </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="SSH (sftp://hello-robot@slinky:22/usr/bin/python3)" project-jdk-type="Python SDK" />
 </project>
