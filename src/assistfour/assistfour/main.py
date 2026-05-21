@@ -3,10 +3,11 @@ from __future__ import annotations
 from geometry_msgs.msg import Twist
 from hello_helpers.hello_misc import HelloNode
 
-from .constants import FEEDER_FRAME
+from .constants import FEEDER_FRAME, ROBOT_FRAME
 from .navigation_manager import NavigationManager
 from math import radians
 from typing import TYPE_CHECKING
+from time import sleep
 
 if TYPE_CHECKING:
     from rclpy.publisher import Publisher
@@ -38,6 +39,12 @@ class Main(HelloNode):
         self.navigation_manager.drive_to_marker(FEEDER_FRAME, 0.75)
 
         self.move_to_pose({"joint_head_pan": radians(-90)}, blocking=True)
+
+        # Wait for marker to disappear.
+        while self.get_tf(ROBOT_FRAME, FEEDER_FRAME) is not None:
+            sleep(1)
+
+        # Final point to.
         self.navigation_manager.point_at_marker(FEEDER_FRAME, False, 0)
 
         self.get_logger().info("Motion complete.")

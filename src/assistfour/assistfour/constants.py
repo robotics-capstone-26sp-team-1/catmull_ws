@@ -14,7 +14,7 @@ COLUMN_7_FRAME = "column_7"
 SEARCH_SPIN_RATE = 0.2  # rad / sec; must be <= Pi
 MARKER_SEARCH_PERIOD = 0.5  # seconds (2 Hz); must be >= 2 Hz (<= 0.5 seconds)
 MAX_FORWARD_SPEED = 0.2  # m / sec
-MINIMUM_FORWARD_DISTANCE_THRESHOLD = 0.05  # m
+MINIMUM_FORWARD_DISTANCE_THRESHOLD = 0.1  # m
 
 # Minimums
 MINIMUM_ANGLE_THRESHOLD = 0.05

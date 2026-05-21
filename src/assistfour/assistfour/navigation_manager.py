@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from geometry_msgs.msg import Twist
 from tf_transformations import quaternion_matrix
 from numpy import array, matmul
+from time import sleep
 
 from .constants import (
     ROBOT_FRAME,
@@ -65,7 +66,7 @@ class NavigationManager:
                     self._marker_found = True
                     break
 
-        # Reset search state for the next search.
+        # Reset search state.
         self._marker_found = False
 
         # Do spin.
@@ -81,17 +82,27 @@ class NavigationManager:
         # Switch back to position mode.
         self._node.switch_to_position_mode()
 
-        # Iterative refinement.
-        angle_to_marker = inf
-        while abs(angle_to_marker) > MINIMUM_ANGLE_THRESHOLD:
-            # Compute current angle.
+        def compute_angle_to_marker() -> float:
             tf = self._node.get_tf(ROBOT_FRAME, name)
+            if tf is None:
+                raise ValueError("Marker not found. Unable to compute angle to marker.")
             target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
-            angle_to_marker = atan2(target_point_y, target_point_x)
+            angle = atan2(target_point_y, target_point_x)
+            self._node.get_logger().info(f"Angle to marker: {angle}")
+            return angle
 
+        # Iterative refinement.
+        angle_to_marker = compute_angle_to_marker()
+        while abs(angle_to_marker) > MINIMUM_ANGLE_THRESHOLD:
             # Rotate.
             self._node.get_logger().info(f"Correcting by {angle_to_marker}...")
             self._node.move_to_pose({"rotate_mobile_base": angle_to_marker}, blocking=True)
+
+            # Wait for marker to refresh.
+            sleep(1)
+
+            # Compute current angle.
+            angle_to_marker = compute_angle_to_marker()
 
         self._node.get_logger().info("Pointing at marker!")
 
@@ -99,25 +110,30 @@ class NavigationManager:
         # Enter travel pose.
         self.enter_travel_pose()
 
-        # Look down slightly.
+        # Look down slightly and align to drive direction.
         self._node.move_to_pose({"joint_head_tilt": -0.3, "joint_head_pan": 0}, blocking=True)
 
-        # Verify marker can be found.
-        if self._node.get_tf(ROBOT_FRAME, name) is None:
-            raise ValueError("Marker not found. Unable to drive to point.")
+        def compute_distance_to_marker() -> float:
+            tf = self._node.get_tf(ROBOT_FRAME, name)
+            if tf is None:
+                raise ValueError("Marker not found. Unable to drive to point.")
+
+            target_point_x, _ = self._target_xy_from_tf(tf, forward_offset)
+            self._node.get_logger().info(f"Distance to marker: {target_point_x}")
+            return target_point_x
 
         # Approach.
-        distance_to_point = inf
-        while abs(distance_to_point) > MINIMUM_FORWARD_DISTANCE_THRESHOLD:
-            # Compute current distance.
-            tf = self._node.get_tf(ROBOT_FRAME, name)
-            target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
-            distance_to_point = sqrt(target_point_x * target_point_x + target_point_y * target_point_y)
-
-            # Drive.
-            self._node.get_logger().info(f"Moving by {distance_to_point}...")
-            self._node.move_to_pose({"translate_mobile_base": distance_to_point}, blocking=True)
-
+        distance_to_marker = compute_distance_to_marker()
+        self._node.move_to_pose({"translate_mobile_base": distance_to_marker}, blocking=True)
+        # while abs(distance_to_marker) > MINIMUM_FORWARD_DISTANCE_THRESHOLD:
+        #     # Compute current distance.
+        #     distance_to_marker = compute_distance_to_marker()
+        #
+        #     # Drive.
+        #     self._node.get_logger().info(f"Moving by {distance_to_marker}...")
+        #     self._node.move_to_pose({"translate_mobile_base": distance_to_marker}, blocking=True)
+        #     sleep(1)
+        #
         self._node.get_logger().info("At marker!")
 
     def enter_travel_pose(self):
