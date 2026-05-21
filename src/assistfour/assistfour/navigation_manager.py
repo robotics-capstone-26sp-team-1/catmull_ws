@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from threading import Event, Lock, Thread
-from math import atan2, pi, inf
+from threading import Thread
+from math import atan2, inf, sqrt
 from typing import TYPE_CHECKING
 from geometry_msgs.msg import Twist
 from tf_transformations import quaternion_matrix
@@ -12,7 +12,6 @@ from .constants import (
     SEARCH_SPIN_RATE,
     MARKER_SEARCH_PERIOD,
     MINIMUM_ANGLE_THRESHOLD,
-    MAX_FORWARD_SPEED,
     MINIMUM_FORWARD_DISTANCE_THRESHOLD,
 )
 
@@ -29,19 +28,12 @@ class NavigationManager:
         self._search_spin_loop: Timer | None = None
         self._marker_found = False
 
-        # Drive to point.
-        self._point_drive_loop: Timer | None = None
-        self._point_stop_event = Event()
-        self._point_lock = Lock()
-        self._point_distance_to_target = inf
-        self._in_drive_recovery = False
-
     def point_at_marker(self, name: str, clockwise: bool, forward_offset: float):
         # Enter travel pose.
         self.enter_travel_pose()
 
         # Look down slightly (markers are lower than head).
-        self._node.move_to_pose({"joint_head_tilt": -0.3, "joint_head_pan": 0}, blocking=True)
+        self._node.move_to_pose({"joint_head_tilt": -0.3}, blocking=True)
 
         # Switch to navigation mode.
         self._node.switch_to_navigation_mode()
@@ -90,118 +82,43 @@ class NavigationManager:
         self._node.switch_to_position_mode()
 
         # Iterative refinement.
-        angle_to_point = inf
-        while abs(angle_to_point) > MINIMUM_ANGLE_THRESHOLD:
+        angle_to_marker = inf
+        while abs(angle_to_marker) > MINIMUM_ANGLE_THRESHOLD:
             # Compute current angle.
             tf = self._node.get_tf(ROBOT_FRAME, name)
             target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
-            angle_to_point = atan2(target_point_y, target_point_x)
+            angle_to_marker = atan2(target_point_y, target_point_x)
 
             # Rotate.
-            self._node.get_logger().info(f"Correcting by {angle_to_point}...")
-            self._node.move_to_pose({"rotate_mobile_base": angle_to_point}, blocking=True)
+            self._node.get_logger().info(f"Correcting by {angle_to_marker}...")
+            self._node.move_to_pose({"rotate_mobile_base": angle_to_marker}, blocking=True)
 
         self._node.get_logger().info("Pointing at marker!")
 
-    def drive_to_point(self, name: str, forward_offset: float):
+    def drive_to_marker(self, name: str, forward_offset: float):
         # Enter travel pose.
         self.enter_travel_pose()
 
-        # Look down slightly (markers are lower than head).
-        self._node.move_to_pose({"joint_head_tilt": -0.6}, blocking=True)
+        # Look down slightly.
+        self._node.move_to_pose({"joint_head_tilt": -0.3, "joint_head_pan": 0}, blocking=True)
 
         # Verify marker can be found.
         if self._node.get_tf(ROBOT_FRAME, name) is None:
             raise ValueError("Marker not found. Unable to drive to point.")
 
-        # Switch to navigation mode.
-        self._node.switch_to_navigation_mode()
+        # Approach.
+        distance_to_point = inf
+        while abs(distance_to_point) > MINIMUM_FORWARD_DISTANCE_THRESHOLD:
+            # Compute current distance.
+            tf = self._node.get_tf(ROBOT_FRAME, name)
+            target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
+            distance_to_point = sqrt(target_point_x * target_point_x + target_point_y * target_point_y)
 
-        # Assume we are far away from target.
-        self._point_distance_to_target = inf
+            # Drive.
+            self._node.get_logger().info(f"Moving by {distance_to_point}...")
+            self._node.move_to_pose({"translate_mobile_base": distance_to_point}, blocking=True)
 
-        # Define drive loop.
-        def drive():
-            # Exit if drive loop is not running or publisher is not ready.
-            if self._point_drive_loop is None or self._node.vel_publisher is None:
-                return
-
-            # Define velocity command.
-            command = Twist()
-
-            # Pull last known distance to target.
-            with self._point_lock:
-                point_distance_to_target = self._point_distance_to_target
-
-            # Switch drive based on recovery.
-            if self._in_drive_recovery:
-                command.linear.x = -MAX_FORWARD_SPEED
-            else:
-                # Clamp rate to drive speed.
-                rate = min(MAX_FORWARD_SPEED, point_distance_to_target)
-
-                # Round to 0 when within threshold.
-                if point_distance_to_target < MINIMUM_FORWARD_DISTANCE_THRESHOLD:
-                    self._point_stop_event.set()
-                    self._point_drive_loop.destroy()
-                    self._node.stop_the_robot()
-                    self._node.get_logger().info("Reached target point.")
-                    return
-
-                command.linear.x = rate
-
-            # Send command.
-            self._node.get_logger().info(
-                f"Setting rate: {command.linear.x} m/sec. Last known distance to target: {point_distance_to_target}")
-            self._node.vel_publisher.publish(command)
-
-        # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
-        def search():
-            while not self._point_stop_event.is_set():
-                # Try to find marker.
-                tf = self._node.get_tf(ROBOT_FRAME, name)
-
-                # Switch to recovery if marker is lost during forward drive.
-                if tf is None and not self._in_drive_recovery:
-                    self._node.get_logger().error("Marker has been lost.")
-
-                    # Enable recovery mode.
-                    self._in_drive_recovery = True
-                # Stop if marker is found during recovery.
-                elif tf is not None and self._in_drive_recovery:
-                    self._node.get_logger().info("Recovered marker!")
-                    self._point_stop_event.set()
-                    if self._point_drive_loop is not None:
-                        self._point_drive_loop.destroy()
-                    self._node.stop_the_robot()
-
-                # Update distance to target.
-                if tf is not None:
-                    target_x, target_y = self._target_xy_from_tf(tf, forward_offset)
-                    with self._point_lock:
-                        self._point_distance_to_target = max(0.0, target_x)
-
-        # Reset search state for a fresh run.
-        self._point_stop_event.clear()
-
-        # Do drive.
-        self._point_drive_loop = self._node.create_timer(MARKER_SEARCH_PERIOD, drive)
-
-        # Do search (non-blocking for executor/timers).
-        search_thread = Thread(target=search, daemon=True)
-        search_thread.start()
-
-        # Wait for search to complete.
-        search_thread.join()
-
-        # Switch back to pos mode.
-        self._node.switch_to_position_mode()
-
-        # If finished in recovery mode, complete rest of drive using absolute positioning.
-        if self._in_drive_recovery:
-            self._node.get_logger().info("Completing recovery drive.")
-            self._node.move_to_pose({"translate_mobile_base": self._point_distance_to_target}, blocking=True)
-            self._in_drive_recovery = False
+        self._node.get_logger().info("At marker!")
 
     def enter_travel_pose(self):
         self._node.move_to_pose(
