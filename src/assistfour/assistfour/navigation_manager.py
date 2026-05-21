@@ -89,6 +89,20 @@ class NavigationManager:
         # Switch back to position mode.
         self._node.switch_to_position_mode()
 
+        # Iterative refinement.
+        angle_to_point = inf
+        while abs(angle_to_point) > MINIMUM_ANGLE_THRESHOLD:
+            # Compute current angle.
+            tf = self._node.get_tf(ROBOT_FRAME, name)
+            target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
+            angle_to_point = atan2(target_point_y, target_point_x)
+
+            # Rotate.
+            self._node.get_logger().info(f"Correcting by {angle_to_point}...")
+            self._node.move_to_pose({"rotate_mobile_base": angle_to_point}, blocking=True)
+
+        self._node.get_logger().info("Pointing at marker!")
+
     def drive_to_point(self, name: str, forward_offset: float):
         # Enter travel pose.
         self.enter_travel_pose()
