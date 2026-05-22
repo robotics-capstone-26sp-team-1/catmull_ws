@@ -7,6 +7,7 @@ from geometry_msgs.msg import Twist, TransformStamped
 from tf_transformations import quaternion_matrix
 from numpy import array, matmul
 from time import sleep
+from rclpy.time import Time
 
 from .constants import (
     ROBOT_FRAME,
@@ -151,7 +152,10 @@ class NavigationManager:
     def _get_recent_tf(self, source: str, target: str) -> TransformStamped | None:
         tf = self._node.get_tf(source, target)
         if tf is not None:
-            if tf.header.stamp <= MAX_TF_AGE:
+            current_time = self._node.get_clock().now()
+            tf_age = (current_time - Time.from_msg(tf.header.stamp)).nanoseconds / 1e9
+            self._node.get_logger().info(f"TF age: {tf_age:.3f} seconds")
+            if tf_age <= MAX_TF_AGE:
                 return tf
 
         return None
