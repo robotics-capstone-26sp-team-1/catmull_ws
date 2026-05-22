@@ -40,10 +40,6 @@ class Main(HelloNode):
 
         self.move_to_pose({"joint_head_pan": radians(-90)}, blocking=True)
 
-        # Wait for marker to disappear.
-        while self.get_tf(ROBOT_FRAME, FEEDER_FRAME) is not None:
-            sleep(1)
-
         # Final point to.
         self.navigation_manager.point_at_marker(FEEDER_FRAME, False, 0)
 

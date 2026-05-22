@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from threading import Thread
-from math import atan2, inf, sqrt
+from math import atan2
 from typing import TYPE_CHECKING
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TransformStamped
 from tf_transformations import quaternion_matrix
 from numpy import array, matmul
 from time import sleep
@@ -13,7 +13,7 @@ from .constants import (
     SEARCH_SPIN_RATE,
     MARKER_SEARCH_PERIOD,
     MINIMUM_ANGLE_THRESHOLD,
-    MINIMUM_FORWARD_DISTANCE_THRESHOLD,
+    MAX_TF_AGE,
 )
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ class NavigationManager:
         def search():
             while True:
                 # Try to find marker.
-                tf = self._node.get_tf(ROBOT_FRAME, name)
+                tf = self._get_recent_tf(ROBOT_FRAME, name)
 
                 if tf is not None:
                     self._marker_found = True
@@ -83,7 +83,7 @@ class NavigationManager:
         self._node.switch_to_position_mode()
 
         def compute_angle_to_marker() -> float:
-            tf = self._node.get_tf(ROBOT_FRAME, name)
+            tf = self._get_recent_tf(ROBOT_FRAME, name)
             if tf is None:
                 raise ValueError("Marker not found. Unable to compute angle to marker.")
             target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
@@ -114,7 +114,7 @@ class NavigationManager:
         self._node.move_to_pose({"joint_head_tilt": -0.3, "joint_head_pan": 0}, blocking=True)
 
         def compute_distance_to_marker() -> float:
-            tf = self._node.get_tf(ROBOT_FRAME, name)
+            tf = self._get_recent_tf(ROBOT_FRAME, name)
             if tf is None:
                 raise ValueError("Marker not found. Unable to drive to point.")
 
@@ -148,8 +148,16 @@ class NavigationManager:
             blocking=True,
         )
 
+    def _get_recent_tf(self, source: str, target: str) -> TransformStamped | None:
+        tf = self._node.get_tf(source, target)
+        if tf is not None:
+            if tf.header.stamp <= MAX_TF_AGE:
+                return tf
+
+        return None
+
     @staticmethod
-    def _target_xy_from_tf(tf, forward_offset: float) -> tuple[float, float]:
+    def _target_xy_from_tf(tf: TransformStamped, forward_offset: float) -> tuple[float, float]:
         # Compute the target point in the robot frame after applying the marker offset.
         if forward_offset == 0:
             return tf.transform.translation.x, tf.transform.translation.y
