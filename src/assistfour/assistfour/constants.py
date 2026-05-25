@@ -11,7 +11,9 @@ COLUMN_6_FRAME = "column_6"
 COLUMN_7_FRAME = "column_7"
 
 # Rates.
-MAX_TF_AGE = 1  # seconds
+MAX_TF_AGE = 0.5  # seconds
+RECENT_TF_POLL_TIME = 0.25  # second
+RECENT_TF_TIMEOUT = 5.0  # seconds
 SEARCH_SPIN_RATE = 0.2  # rad / sec; must be <= Pi
 MARKER_SEARCH_PERIOD = 0.5  # seconds (2 Hz); must be >= 2 Hz (<= 0.5 seconds)
 MAX_FORWARD_SPEED = 0.2  # m / sec

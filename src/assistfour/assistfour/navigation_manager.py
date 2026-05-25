@@ -3,10 +3,10 @@ from __future__ import annotations
 from threading import Thread
 from math import atan2
 from typing import TYPE_CHECKING
+from time import monotonic, sleep
 from geometry_msgs.msg import Twist, TransformStamped
 from tf_transformations import quaternion_matrix
 from numpy import array, matmul
-from time import sleep
 from rclpy.time import Time
 
 from .constants import (
@@ -15,6 +15,8 @@ from .constants import (
     MARKER_SEARCH_PERIOD,
     MINIMUM_ANGLE_THRESHOLD,
     MAX_TF_AGE,
+    RECENT_TF_POLL_TIME,
+    RECENT_TF_TIMEOUT,
 )
 
 if TYPE_CHECKING:
@@ -67,6 +69,9 @@ class NavigationManager:
                     self._marker_found = True
                     break
 
+                # Wait 1/4 second before trying again.
+                sleep(0.25)
+
         # Reset search state.
         self._marker_found = False
 
@@ -84,9 +89,7 @@ class NavigationManager:
         self._node.switch_to_position_mode()
 
         def compute_angle_to_marker() -> float:
-            tf = self._get_recent_tf(ROBOT_FRAME, name)
-            if tf is None:
-                raise ValueError("Marker not found. Unable to compute angle to marker.")
+            tf = self._block_until_recent_tf(ROBOT_FRAME, name)
             target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
             angle = atan2(target_point_y, target_point_x)
             self._node.get_logger().info(f"Angle to marker: {angle}")
@@ -98,9 +101,6 @@ class NavigationManager:
             # Rotate.
             self._node.get_logger().info(f"Correcting by {angle_to_marker}...")
             self._node.move_to_pose({"rotate_mobile_base": angle_to_marker}, blocking=True)
-
-            # Wait for marker to refresh.
-            sleep(1)
 
             # Compute current angle.
             angle_to_marker = compute_angle_to_marker()
@@ -115,9 +115,7 @@ class NavigationManager:
         self._node.move_to_pose({"joint_head_tilt": -0.3, "joint_head_pan": 0}, blocking=True)
 
         def compute_distance_to_marker() -> float:
-            tf = self._get_recent_tf(ROBOT_FRAME, name)
-            if tf is None:
-                raise ValueError("Marker not found. Unable to drive to point.")
+            tf = self._block_until_recent_tf(ROBOT_FRAME, name)
 
             target_point_x, _ = self._target_xy_from_tf(tf, forward_offset)
             self._node.get_logger().info(f"Distance to marker: {target_point_x}")
@@ -126,18 +124,10 @@ class NavigationManager:
         # Approach.
         distance_to_marker = compute_distance_to_marker()
         self._node.move_to_pose({"translate_mobile_base": distance_to_marker}, blocking=True)
-        # while abs(distance_to_marker) > MINIMUM_FORWARD_DISTANCE_THRESHOLD:
-        #     # Compute current distance.
-        #     distance_to_marker = compute_distance_to_marker()
-        #
-        #     # Drive.
-        #     self._node.get_logger().info(f"Moving by {distance_to_marker}...")
-        #     self._node.move_to_pose({"translate_mobile_base": distance_to_marker}, blocking=True)
-        #     sleep(1)
-        #
         self._node.get_logger().info("At marker!")
 
     def enter_travel_pose(self):
+        """Move the arm into a safe pose for traveling."""
         self._node.move_to_pose(
             {
                 "joint_wrist_pitch": -1.6,
@@ -150,19 +140,35 @@ class NavigationManager:
         )
 
     def _get_recent_tf(self, source: str, target: str) -> TransformStamped | None:
+        """Returns TF if within MAX_TF_AGE seconds old."""
         tf = self._node.get_tf(source, target)
         if tf is not None:
             current_time = self._node.get_clock().now()
             tf_age = (current_time - Time.from_msg(tf.header.stamp)).nanoseconds / 1e9
-            self._node.get_logger().info(f"TF age: {tf_age:.3f} seconds")
+            self._node.get_logger().info(f"{target} TF age: {tf_age:.3f} seconds.")
             if tf_age <= MAX_TF_AGE:
                 return tf
 
         return None
 
+    def _block_until_recent_tf(self, source: str, target: str) -> TransformStamped:
+        """Block until a recent TF is found."""
+        start_time = monotonic()
+        tf = self._get_recent_tf(source, target)
+        while tf is None:
+            if monotonic() - start_time >= RECENT_TF_TIMEOUT:
+                raise ValueError(
+                    f"Recent TF for {target} was not available within {RECENT_TF_TIMEOUT} seconds."
+                )
+            self._node.get_logger().info("Waiting for more recent TF...")
+            sleep(RECENT_TF_POLL_TIME)
+            tf = self._get_recent_tf(source, target)
+
+        return tf
+
     @staticmethod
     def _target_xy_from_tf(tf: TransformStamped, forward_offset: float) -> tuple[float, float]:
-        # Compute the target point in the robot frame after applying the marker offset.
+        """Compute the target point in the robot frame after applying the marker offset."""
         if forward_offset == 0:
             return tf.transform.translation.x, tf.transform.translation.y
 
