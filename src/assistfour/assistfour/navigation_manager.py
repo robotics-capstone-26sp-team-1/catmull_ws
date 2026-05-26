@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from threading import Thread
-from math import atan2
+from math import atan2, radians
 from typing import TYPE_CHECKING
 from time import monotonic, sleep
 from geometry_msgs.msg import Twist, TransformStamped
@@ -32,12 +32,15 @@ class NavigationManager:
         self._search_spin_loop: Timer | None = None
         self._marker_found = False
 
-    def point_at_marker(self, name: str, clockwise: bool, forward_offset: float):
+    def point_at_marker(self, name: str, clockwise: bool, forward_offset: float, pan_offset_deg: float):
         # Enter travel pose.
         self.enter_travel_pose()
 
+        # Convert pan offset to radian.
+        pan_offset_rad = radians(pan_offset_deg)
+
         # Look down slightly (markers are lower than head).
-        self._node.move_to_pose({"joint_head_tilt": -0.3}, blocking=True)
+        self._node.move_to_pose({"joint_head_tilt": -0.3, "joint_head_pan": pan_offset_rad}, blocking=True)
 
         # Switch to navigation mode.
         self._node.switch_to_navigation_mode()
@@ -90,8 +93,14 @@ class NavigationManager:
 
         def compute_angle_to_marker() -> float:
             tf = self._block_until_recent_tf(ROBOT_FRAME, name)
+
+            # Compute angle based on location.
             target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
             angle = atan2(target_point_y, target_point_x)
+
+            # Adjust for head pan offset.
+            angle -= pan_offset_rad
+
             self._node.get_logger().info(f"Angle to marker: {angle}")
             return angle
 

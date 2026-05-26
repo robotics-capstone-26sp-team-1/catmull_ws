@@ -33,15 +33,12 @@ class Main(HelloNode):
         self.vel_publisher = self.create_publisher(Twist, "/stretch/cmd_vel", 10)
 
         # Demo finding feeder and orienting to it.
-        self.move_to_pose({"joint_head_pan": 0}, blocking=True)
-        self.navigation_manager.point_at_marker(FEEDER_FRAME, True, 0.75)
+        self.navigation_manager.point_at_marker(FEEDER_FRAME, True, 0.75, 0)
 
         self.navigation_manager.drive_to_marker(FEEDER_FRAME, 0.75)
 
-        self.move_to_pose({"joint_head_pan": radians(-90)}, blocking=True)
-
         # Final point to.
-        self.navigation_manager.point_at_marker(FEEDER_FRAME, False, 0)
+        self.navigation_manager.point_at_marker(FEEDER_FRAME, False, 0, -90)
 
         self.get_logger().info("Motion complete.")
 
