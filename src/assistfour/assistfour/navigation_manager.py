@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from threading import Thread
+from threading import Thread, Event
 from math import atan2, radians
 from typing import TYPE_CHECKING
 from time import monotonic, sleep
@@ -30,9 +30,12 @@ class NavigationManager:
 
         # Marker searching.
         self._search_spin_loop: Timer | None = None
+        self._search_spin_stop_event = Event()
         self._marker_found = False
 
-    def point_at_marker(self, name: str, clockwise: bool, forward_offset: float, pan_offset_deg: float):
+    def point_at_marker(
+        self, name: str, clockwise: bool, forward_offset: float, pan_offset_deg: float
+    ):
         # Enter travel pose.
         self.enter_travel_pose()
 
@@ -40,7 +43,9 @@ class NavigationManager:
         pan_offset_rad = radians(pan_offset_deg)
 
         # Look down slightly (markers are lower than head).
-        self._node.move_to_pose({"joint_head_tilt": -0.2, "joint_head_pan": pan_offset_rad}, blocking=True)
+        self._node.move_to_pose(
+            {"joint_head_tilt": -0.2, "joint_head_pan": pan_offset_rad}, blocking=True
+        )
 
         # Switch to navigation mode.
         self._node.switch_to_navigation_mode()
@@ -64,7 +69,7 @@ class NavigationManager:
 
         # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
         def search():
-            while True:
+            while not self._search_spin_stop_event.is_set():
                 # Try to find marker.
                 tf = self._get_recent_tf(ROBOT_FRAME, name)
 
@@ -109,7 +114,9 @@ class NavigationManager:
         while abs(angle_to_marker) > MINIMUM_ANGLE_THRESHOLD:
             # Rotate.
             self._node.get_logger().info(f"Correcting by {angle_to_marker}...")
-            self._node.move_to_pose({"rotate_mobile_base": angle_to_marker}, blocking=True)
+            self._node.move_to_pose(
+                {"rotate_mobile_base": angle_to_marker}, blocking=True
+            )
 
             # Compute current angle.
             angle_to_marker = compute_angle_to_marker()
@@ -121,7 +128,9 @@ class NavigationManager:
         self.enter_travel_pose()
 
         # Look down slightly and align to drive direction.
-        self._node.move_to_pose({"joint_head_tilt": -0.2, "joint_head_pan": 0}, blocking=True)
+        self._node.move_to_pose(
+            {"joint_head_tilt": -0.2, "joint_head_pan": 0}, blocking=True
+        )
 
         def compute_distance_to_marker() -> float:
             tf = self._block_until_recent_tf(ROBOT_FRAME, name)
@@ -132,7 +141,9 @@ class NavigationManager:
 
         # Approach.
         distance_to_marker = compute_distance_to_marker()
-        self._node.move_to_pose({"translate_mobile_base": distance_to_marker}, blocking=True)
+        self._node.move_to_pose(
+            {"translate_mobile_base": distance_to_marker}, blocking=True
+        )
         self._node.get_logger().info("At marker!")
 
     def enter_travel_pose(self):
@@ -154,7 +165,7 @@ class NavigationManager:
         if tf is not None:
             current_time = self._node.get_clock().now()
             tf_age = (current_time - Time.from_msg(tf.header.stamp)).nanoseconds / 1e9
-            self._node.get_logger().info(f"{target} TF age: {tf_age:.3f} seconds.")
+            # self._node.get_logger().info(f"{target} TF age: {tf_age:.3f} seconds.")
             if tf_age <= MAX_TF_AGE:
                 return tf
 
@@ -176,7 +187,9 @@ class NavigationManager:
         return tf
 
     @staticmethod
-    def _target_xy_from_tf(tf: TransformStamped, forward_offset: float) -> tuple[float, float]:
+    def _target_xy_from_tf(
+        tf: TransformStamped, forward_offset: float
+    ) -> tuple[float, float]:
         """Compute the target point in the robot frame after applying the marker offset."""
         if forward_offset == 0:
             return tf.transform.translation.x, tf.transform.translation.y
