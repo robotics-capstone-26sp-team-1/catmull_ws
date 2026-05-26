@@ -31,13 +31,8 @@ class Main(HelloNode):
         # Initialize ROS components.
         self.vel_publisher = self.create_publisher(Twist, "/stretch/cmd_vel", 10)
 
-        # Demo finding feeder and orienting to it.
-        self.navigation_manager.point_at_marker(FEEDER_FRAME, True, 0.75, 0)
-
-        self.navigation_manager.drive_to_marker(FEEDER_FRAME, 0.75)
-
-        # Final point to.
-        self.navigation_manager.point_at_marker(FEEDER_FRAME, False, 0, -90)
+        # Demo: move to column 4.
+        self.navigation_manager.move_to_column(4)
 
         self.get_logger().info("Motion complete.")
 

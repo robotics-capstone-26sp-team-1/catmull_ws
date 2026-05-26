@@ -17,6 +17,7 @@ from .constants import (
     MAX_TF_AGE,
     RECENT_TF_POLL_TIME,
     RECENT_TF_TIMEOUT,
+    COLUMN_MAP, FEEDER_FRAME,
 )
 
 if TYPE_CHECKING:
@@ -33,8 +34,21 @@ class NavigationManager:
         self._search_spin_stop_event = Event()
         self._marker_found = False
 
+    def move_to_column(self, column_number: int):
+        frame_name = COLUMN_MAP[column_number]
+        self.move_to_marker(frame_name)
+
+    def move_to_feeder(self):
+        self.move_to_marker(FEEDER_FRAME)
+
+    def move_to_marker(self, name: str):
+        """High level operation to drive from anywhere to a marker and align arm to face it."""
+        self.point_at_marker(name, True, 0.5, 0)
+        self.drive_to_marker(name, 0.5)
+        self.point_at_marker(name, False, 0, -90)
+
     def point_at_marker(
-        self, name: str, clockwise: bool, forward_offset: float, pan_offset_deg: float
+            self, name: str, clockwise: bool, forward_offset: float, pan_offset_deg: float
     ):
         # Enter travel pose.
         self.enter_travel_pose()
@@ -188,7 +202,7 @@ class NavigationManager:
 
     @staticmethod
     def _target_xy_from_tf(
-        tf: TransformStamped, forward_offset: float
+            tf: TransformStamped, forward_offset: float
     ) -> tuple[float, float]:
         """Compute the target point in the robot frame after applying the marker offset."""
         if forward_offset == 0:
