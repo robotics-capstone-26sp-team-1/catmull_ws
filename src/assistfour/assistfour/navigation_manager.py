@@ -40,7 +40,7 @@ class NavigationManager:
         pan_offset_rad = radians(pan_offset_deg)
 
         # Look down slightly (markers are lower than head).
-        self._node.move_to_pose({"joint_head_tilt": -0.3, "joint_head_pan": pan_offset_rad}, blocking=True)
+        self._node.move_to_pose({"joint_head_tilt": -0.2, "joint_head_pan": pan_offset_rad}, blocking=True)
 
         # Switch to navigation mode.
         self._node.switch_to_navigation_mode()
@@ -121,7 +121,7 @@ class NavigationManager:
         self.enter_travel_pose()
 
         # Look down slightly and align to drive direction.
-        self._node.move_to_pose({"joint_head_tilt": -0.3, "joint_head_pan": 0}, blocking=True)
+        self._node.move_to_pose({"joint_head_tilt": -0.2, "joint_head_pan": 0}, blocking=True)
 
         def compute_distance_to_marker() -> float:
             tf = self._block_until_recent_tf(ROBOT_FRAME, name)
