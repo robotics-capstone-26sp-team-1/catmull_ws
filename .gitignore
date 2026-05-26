@@ -195,3 +195,6 @@ AMENT_IGNORE
 # End of https://www.toptal.com/developers/gitignore/api/ros2,pycharm,linux,macos
 /install
 /log
+
+.idea/catmull_ws.iml
+.idea/deployment.xml
