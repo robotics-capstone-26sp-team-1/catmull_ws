@@ -36,8 +36,10 @@ class Main(HelloNode):
     def __init__(self):
         HelloNode.__init__(self)
 
+        # ROS components.
         self.vel_publisher: Publisher | None = None
 
+        # Application components.
         self.navigation_manager = NavigationManager(self)
 
     def move_to_column(self, column_number: int):
@@ -88,14 +90,10 @@ class Main(HelloNode):
             wait_for_first_pointcloud=False,
         )
 
-        #
-        # Ensure correct mode.
-        #
+         # Ensure in position mode.
         self.switch_to_position_mode()
 
-        #
-        # Create velocity publisher.
-        #
+        # Initialize ROS components.
         self.vel_publisher = self.create_publisher(
             Twist,
             "/stretch/cmd_vel",
