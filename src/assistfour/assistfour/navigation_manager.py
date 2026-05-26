@@ -228,7 +228,7 @@ class NavigationManager:
                 tf.transform.rotation.w,
             )
         )
-        offset_vector = array([[0], [0], [forward_offset], [1]])
+        offset_vector = array([[forward_offset], [0], [0], [1]])
         marker_vector = array(
             [[tf.transform.translation.x], [tf.transform.translation.y], [0], [1]]
         )
