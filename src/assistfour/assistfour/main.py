@@ -1,4 +1,5 @@
 from __future__ import annotations
+from math import radians
 
 from geometry_msgs.msg import Twist
 from hello_helpers.hello_misc import HelloNode
@@ -62,6 +63,13 @@ class Main(HelloNode):
         self.navigation_manager.drive_to_point(
             column_frame,
             forward_offset=0.75,
+        )
+
+        self.move_to_pose(
+            {
+                "joint_head_pan": radians(-90)
+            },
+            blocking=True,
         )
 
         # Step 3:
