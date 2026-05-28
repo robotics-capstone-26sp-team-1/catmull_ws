@@ -3,8 +3,8 @@
 <package format="3">
   <name>assistfour</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="kjy5@uw.edu">kenneth</maintainer>
+  <description>Connect Four play robot system.</description>
+  <maintainer email="kjy5@uw.edu">Kenneth Yang</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
