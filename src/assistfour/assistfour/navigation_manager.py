@@ -1,19 +1,23 @@
 from __future__ import annotations
 
-from threading import Event, Lock, Thread
-from math import atan2, pi, inf
+from threading import Thread, Event
+from math import atan2, radians
 from typing import TYPE_CHECKING
-from geometry_msgs.msg import Twist
+from time import monotonic, sleep
+from geometry_msgs.msg import Twist, TransformStamped
 from tf_transformations import quaternion_matrix
 from numpy import array, matmul
+from rclpy.time import Time
 
 from .constants import (
     ROBOT_FRAME,
     SEARCH_SPIN_RATE,
     MARKER_SEARCH_PERIOD,
     MINIMUM_ANGLE_THRESHOLD,
-    MAX_FORWARD_SPEED,
-    MINIMUM_FORWARD_DISTANCE_THRESHOLD,
+    MAX_TF_AGE,
+    RECENT_TF_POLL_TIME,
+    RECENT_TF_TIMEOUT,
+    COLUMN_MAP, FEEDER_FRAME,
 )
 
 if TYPE_CHECKING:
@@ -27,28 +31,38 @@ class NavigationManager:
 
         # Marker searching.
         self._search_spin_loop: Timer | None = None
-        self._search_stop_event = Event()
-        self._angle_lock = Lock()
-        self._angle_to_marker = pi
+        self._search_spin_stop_event = Event()
+        self._marker_found = False
 
-        # Drive to point.
-        self._point_drive_loop: Timer | None = None
-        self._point_stop_event = Event()
-        self._point_lock = Lock()
-        self._point_distance_to_target = inf
+    def move_to_column(self, column_number: int):
+        frame_name = COLUMN_MAP[column_number]
+        self.move_to_marker(frame_name)
 
-    def point_at_marker(self, name: str, clockwise: bool, forward_offset: float):
+    def move_to_feeder(self):
+        self.move_to_marker(FEEDER_FRAME)
+
+    def move_to_marker(self, name: str):
+        """High level operation to drive from anywhere to a marker and align arm to face it."""
+        self.point_at_marker(name, True, 0.5, 0)
+        self.drive_to_marker(name, 0.5)
+        self.point_at_marker(name, False, 0, -90)
+
+    def point_at_marker(
+            self, name: str, clockwise: bool, forward_offset: float, pan_offset_deg: float
+    ):
         # Enter travel pose.
         self.enter_travel_pose()
 
+        # Convert pan offset to radian.
+        pan_offset_rad = radians(pan_offset_deg)
+
         # Look down slightly (markers are lower than head).
-        self._node.move_to_pose({"joint_head_tilt": -0.3}, blocking=True)
+        self._node.move_to_pose(
+            {"joint_head_tilt": -0.2, "joint_head_pan": pan_offset_rad}, blocking=True
+        )
 
         # Switch to navigation mode.
         self._node.switch_to_navigation_mode()
-
-        # Assume marker is not found.
-        self._angle_to_marker = pi
 
         # Define spin loop.
         def spin():
@@ -56,60 +70,32 @@ class NavigationManager:
             if self._search_spin_loop is None or self._node.vel_publisher is None:
                 return
 
-            # Define velocity command.
-            command = Twist()
-
-            # Clamp rate to spin speed (with direction).
-            with self._angle_lock:
-                angle_to_marker = self._angle_to_marker
-
-            if abs(angle_to_marker) > SEARCH_SPIN_RATE:
-                rate = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
-            else:
-                rate = angle_to_marker
-
-            # Round to 0 when within threshold.
-            if abs(angle_to_marker) < MINIMUM_ANGLE_THRESHOLD:
-                self._search_stop_event.set()
+            # Not found yet.
+            if self._marker_found:
                 self._search_spin_loop.destroy()
                 self._node.stop_the_robot()
-                self._node.get_logger().info("Aligned to marker.")
-                return
-
-            # Send command.
-            command.angular.z = rate
-            self._node.get_logger().info(f"Setting rate: {rate} rad/sec.")
-            self._node.vel_publisher.publish(command)
+                self._node.get_logger().info("Stopping search spin.")
+            else:
+                # Continue spinning.
+                command = Twist()
+                command.angular.z = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
+                self._node.vel_publisher.publish(command)
 
         # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
         def search():
-            while not self._search_stop_event.is_set():
+            while not self._search_spin_stop_event.is_set():
                 # Try to find marker.
-                tf = self._node.get_tf(ROBOT_FRAME, name)
+                tf = self._get_recent_tf(ROBOT_FRAME, name)
 
-                # Compute angle to marker.
-                with self._angle_lock:
-                    if tf is not None:
-                        # Directly set angle to marker if no offset.
-                        if forward_offset == 0.0:
-                            self._angle_to_marker = atan2(
-                                tf.transform.translation.y,
-                                tf.transform.translation.x,
-                            )
-                        else:
-                            # Compute offset from marker.
-                            final_x, final_y = self._target_xy_from_tf(
-                                tf, forward_offset
-                            )
+                if tf is not None:
+                    self._marker_found = True
+                    break
 
-                            # Set angle to offset position.
-                            self._angle_to_marker = atan2(final_y, final_x)
-                    else:
-                        # Set it to be larger than the spin rate.
-                        self._angle_to_marker = pi
+                # Wait 1/4 second before trying again.
+                sleep(0.25)
 
-        # Reset search state for a fresh run.
-        self._search_stop_event.clear()
+        # Reset search state.
+        self._marker_found = False
 
         # Do spin.
         self._search_spin_loop = self._node.create_timer(MARKER_SEARCH_PERIOD, spin)
@@ -124,100 +110,102 @@ class NavigationManager:
         # Switch back to position mode.
         self._node.switch_to_position_mode()
 
-    def drive_to_point(self, name: str, forward_offset: float):
+        def compute_angle_to_marker() -> float:
+            tf = self._block_until_recent_tf(ROBOT_FRAME, name)
+
+            # Compute angle based on location.
+            target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
+            angle = atan2(target_point_y, target_point_x)
+
+            # Adjust for head pan offset.
+            angle -= pan_offset_rad
+
+            self._node.get_logger().info(f"Angle to marker: {angle}")
+            return angle
+
+        # Iterative refinement.
+        angle_to_marker = compute_angle_to_marker()
+        while abs(angle_to_marker) > MINIMUM_ANGLE_THRESHOLD:
+            # Rotate.
+            self._node.get_logger().info(f"Correcting by {angle_to_marker}...")
+            self._node.move_to_pose(
+                {"rotate_mobile_base": angle_to_marker}, blocking=True
+            )
+
+            # Compute current angle.
+            angle_to_marker = compute_angle_to_marker()
+
+        self._node.get_logger().info("Pointing at marker!")
+
+    def drive_to_marker(self, name: str, forward_offset: float):
         # Enter travel pose.
         self.enter_travel_pose()
 
-        # Look down slightly (markers are lower than head).
-        self._node.move_to_pose({"joint_head_tilt": -0.6}, blocking=True)
+        # Look down slightly and align to drive direction.
+        self._node.move_to_pose(
+            {"joint_head_tilt": -0.2, "joint_head_pan": 0}, blocking=True
+        )
 
-        # Switch to navigation mode.
-        self._node.switch_to_navigation_mode()
+        def compute_distance_to_marker() -> float:
+            tf = self._block_until_recent_tf(ROBOT_FRAME, name)
 
-        # Assume we are far away from target.
-        self._point_distance_to_target = inf
+            target_point_x, _ = self._target_xy_from_tf(tf, forward_offset)
+            self._node.get_logger().info(f"Distance to marker: {target_point_x}")
+            return target_point_x
 
-        # Define drive loop.
-        def drive():
-            # Exit if drive loop is not running or publisher is not ready.
-            if self._point_drive_loop is None or self._node.vel_publisher is None:
-                return
-
-            # Define velocity command.
-            command = Twist()
-
-            # Clamp rate to drive speed.
-            with self._point_lock:
-                point_distance_to_target = self._point_distance_to_target
-
-            rate = min(MAX_FORWARD_SPEED, point_distance_to_target)
-
-            # Round to 0 when within threshold.
-            if point_distance_to_target < MINIMUM_FORWARD_DISTANCE_THRESHOLD:
-                self._point_stop_event.set()
-                self._point_drive_loop.destroy()
-                self._node.stop_the_robot()
-                self._node.get_logger().info("Reached target point.")
-                return
-
-            command.linear.x = rate
-
-            # Send command.
-            self._node.get_logger().info(f"Setting rate: {rate} m/sec.")
-            self._node.vel_publisher.publish(command)
-
-        # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
-        def search():
-            while not self._point_stop_event.is_set():
-                # Try to find marker.
-                tf = self._node.get_tf(ROBOT_FRAME, name)
-
-                if tf is None:
-                    self._node.get_logger().error("Marker has been lost.")
-                    self._point_stop_event.set()
-                    if self._point_drive_loop is not None:
-                        self._point_drive_loop.destroy()
-                    self._node.stop_the_robot()
-                    return
-
-                target_x, target_y = self._target_xy_from_tf(tf, forward_offset)
-                with self._point_lock:
-                    self._point_distance_to_target = max(0.0, target_x)
-
-        # Reset search state for a fresh run.
-        self._point_stop_event.clear()
-
-        # Do drive.
-        self._point_drive_loop = self._node.create_timer(MARKER_SEARCH_PERIOD, drive)
-
-        # Do search (non-blocking for executor/timers).
-        search_thread = Thread(target=search, daemon=True)
-        search_thread.start()
-
-        # Wait for search to complete.
-        search_thread.join()
-
-        # Switch back to pos mode.
-        self._node.switch_to_position_mode()
+        # Approach.
+        distance_to_marker = compute_distance_to_marker()
+        self._node.move_to_pose(
+            {"translate_mobile_base": distance_to_marker}, blocking=True
+        )
+        self._node.get_logger().info("At marker!")
 
     def enter_travel_pose(self):
+        """Move the arm into a safe pose for traveling."""
         self._node.move_to_pose(
             {
-                "joint_head_tilt": 0.0,
                 "joint_wrist_pitch": -1.6,
                 "joint_wrist_roll": 0.0,
                 "joint_wrist_yaw": 0.0,
-                "joint_head_pan": 0.0,
                 "joint_lift": 0.45,
                 "joint_arm": 0.0,
             },
             blocking=True,
         )
 
+    def _get_recent_tf(self, source: str, target: str) -> TransformStamped | None:
+        """Returns TF if within MAX_TF_AGE seconds old."""
+        tf = self._node.get_tf(source, target)
+        if tf is not None:
+            current_time = self._node.get_clock().now()
+            tf_age = (current_time - Time.from_msg(tf.header.stamp)).nanoseconds / 1e9
+            # self._node.get_logger().info(f"{target} TF age: {tf_age:.3f} seconds.")
+            if tf_age <= MAX_TF_AGE:
+                return tf
+
+        return None
+
+    def _block_until_recent_tf(self, source: str, target: str) -> TransformStamped:
+        """Block until a recent TF is found."""
+        start_time = monotonic()
+        tf = self._get_recent_tf(source, target)
+        while tf is None:
+            if monotonic() - start_time >= RECENT_TF_TIMEOUT:
+                raise ValueError(
+                    f"Recent TF for {target} was not available within {RECENT_TF_TIMEOUT} seconds."
+                )
+            self._node.get_logger().info("Waiting for more recent TF...")
+            sleep(RECENT_TF_POLL_TIME)
+            tf = self._get_recent_tf(source, target)
+
+        return tf
+
     @staticmethod
-    def _target_xy_from_tf(tf, forward_offset: float) -> tuple[float, float]:
-        # Compute the target point in the robot frame after applying the marker offset.
-        if forward_offset == 0.0:
+    def _target_xy_from_tf(
+            tf: TransformStamped, forward_offset: float
+    ) -> tuple[float, float]:
+        """Compute the target point in the robot frame after applying the marker offset."""
+        if forward_offset == 0:
             return tf.transform.translation.x, tf.transform.translation.y
 
         rotation_matrix = quaternion_matrix(

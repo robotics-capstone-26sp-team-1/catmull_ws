@@ -10,15 +10,6 @@ COLUMN_5_FRAME = "column_5"
 COLUMN_6_FRAME = "column_6"
 COLUMN_7_FRAME = "column_7"
 
-# Rates.
-SEARCH_SPIN_RATE = 0.5  # rad / sec; must be <= Pi
-MARKER_SEARCH_PERIOD = 0.5  # seconds (2 Hz); must be >= 2 Hz (<= 0.5 seconds)
-MAX_FORWARD_SPEED = 0.5  # m / sec
-MINIMUM_FORWARD_DISTANCE_THRESHOLD = 0.05  # m
-
-# Minimums
-MINIMUM_ANGLE_THRESHOLD = 0.05
-
 COLUMN_MAP = {
     1: COLUMN_1_FRAME,
     2: COLUMN_2_FRAME,
@@ -28,3 +19,15 @@ COLUMN_MAP = {
     6: COLUMN_6_FRAME,
     7: COLUMN_7_FRAME,
 }
+
+# Rates.
+MAX_TF_AGE = 0.5  # seconds
+RECENT_TF_POLL_TIME = 0.25  # second
+RECENT_TF_TIMEOUT = 10.0  # seconds
+SEARCH_SPIN_RATE = 0.2  # rad / sec; must be <= Pi
+MARKER_SEARCH_PERIOD = 0.5  # seconds (2 Hz); must be >= 2 Hz (<= 0.5 seconds)
+MAX_FORWARD_SPEED = 0.2  # m / sec
+MINIMUM_FORWARD_DISTANCE_THRESHOLD = 0.1  # m
+
+# Minimums
+MINIMUM_ANGLE_THRESHOLD = 0.05
