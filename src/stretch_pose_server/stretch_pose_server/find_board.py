@@ -9,17 +9,13 @@ ARUCO_FRAME = "column_4"
 
 
 class FindBoard(HelloNode):
-
     def __init__(self):
         HelloNode.__init__(self)
 
     def main(self):
 
         HelloNode.main(
-            self,
-            "find_board",
-            "find_board",
-            wait_for_first_pointcloud=False
+            self, "find_board", "find_board", wait_for_first_pointcloud=False
         )
 
         # Stow the robot for safe movement.
@@ -35,21 +31,14 @@ class FindBoard(HelloNode):
         self.home_the_robot()
 
     def _find_board(self):
-        self.get_logger().info(
-            "Starting Connect Four board search..."
-        )
+        self.get_logger().info("Starting Connect Four board search...")
 
         #
         # Tilt head slightly downward since
         # the board will likely be below
         # the robot's head height.
         #
-        self.move_to_pose(
-            {
-                "joint_head_tilt": -0.3
-            },
-            blocking=True
-        )
+        self.move_to_pose({"joint_head_tilt": -0.3}, blocking=True)
 
         #
         # Full sweep across the full range
@@ -58,22 +47,12 @@ class FindBoard(HelloNode):
         search_angles = [-4 + i * (6 / 32) for i in range(32)]
 
         while True:
-            self.get_logger().info(
-                "Board not found yet..."
-            )
+            self.get_logger().info("Board not found yet...")
 
             for angle in search_angles:
+                self.get_logger().info(f"Scanning at pan angle {angle:.2f}")
 
-                self.get_logger().info(
-                    f"Scanning at pan angle {angle:.2f}"
-                )
-
-                self.move_to_pose(
-                    {
-                        "joint_head_pan": angle
-                    },
-                    blocking=True
-                )
+                self.move_to_pose({"joint_head_pan": angle}, blocking=True)
 
                 #
                 # Allow TF time to update.
@@ -84,15 +63,10 @@ class FindBoard(HelloNode):
                 # Check whether the board
                 # marker exists.
                 #
-                tf = self.get_tf(
-                    ROBOT_FRAME,
-                    ARUCO_FRAME
-                )
+                tf = self.get_tf(ROBOT_FRAME, ARUCO_FRAME)
 
                 if tf is not None:
-                    self.get_logger().info(
-                        "Found Connect Four board!"
-                    )
+                    self.get_logger().info("Found Connect Four board!")
 
                     return tf
 
@@ -130,7 +104,7 @@ class FindBoard(HelloNode):
 
         # Compute rotation and translation needed
         phi = atan2(base_position_y, base_position_x)
-        dist = sqrt(base_position_x ** 2 + base_position_y ** 2)
+        dist = sqrt(base_position_x**2 + base_position_y**2)
 
         _, _, z_rot_base = euler_from_quaternion([x, y, z, w])
         # Calculate final rotation: -phi (cancel rotation needed to align),

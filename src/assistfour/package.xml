@@ -11,6 +11,7 @@
   <depend>hello_helpers</depend>
   <depend>geometry_msgs</depend>
   <depend>tf_transformations</depend>
+  <depend>assistfour_interfaces</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
