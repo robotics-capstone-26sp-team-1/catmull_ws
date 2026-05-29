@@ -44,18 +44,18 @@ class Main(HelloNode):
             self,
             GetToken,
             "get_token",
-            execute_callback=lambda: None,
-            goal_callback=lambda: None,
-            cancel_callback=lambda: None,
+            execute_callback=self._get_token_execute,
+            goal_callback=lambda _: GoalResponse.ACCEPT,
+            cancel_callback=lambda _: CancelResponse.ACCEPT,
             callback_group=self._callback_group,
         )
         self.goto_column_action = ActionServer(
             self,
             GotoColumn,
             "goto_column",
-            execute_callback=lambda: None,
-            goal_callback=lambda: None,
-            cancel_callback=lambda: None,
+            execute_callback=self._goto_column_execute,
+            goal_callback=lambda _: GoalResponse.ACCEPT,
+            cancel_callback=lambda _: CancelResponse.ACCEPT,
             callback_group=self._callback_group,
         )
 
@@ -63,6 +63,20 @@ class Main(HelloNode):
         # self.navigation_manager.move_to_column(4)
 
         self.get_logger().info("Motion complete.")
+
+    @staticmethod
+    def _get_token_execute(goal_handle):
+        result = GetToken.Result()
+        result.result = "Not implemented."
+        goal_handle.succeed()
+        return result
+
+    @staticmethod
+    def _goto_column_execute(goal_handle):
+        result = GotoColumn.Result()
+        result.result = "Not implemented."
+        goal_handle.succeed()
+        return result
 
 
 def main():
