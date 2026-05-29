@@ -41,6 +41,12 @@ class NavigationManager:
     def move_to_feeder(self):
         self.move_to_marker(FEEDER_FRAME)
 
+    def return_to_start(self):
+        """Return robot to the designated start position."""
+        self.enter_travel_pose()
+        self.move_to_feeder()
+        self.enter_travel_pose()
+
     def move_to_marker(self, name: str):
         """High level operation to drive from anywhere to a marker and align arm to face it."""
         self.point_at_marker(name, True, 0.5, 0)
