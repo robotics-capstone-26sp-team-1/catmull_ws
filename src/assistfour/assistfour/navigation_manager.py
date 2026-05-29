@@ -144,7 +144,7 @@ class NavigationManager:
 
         # Look down slightly and align to drive direction.
         self._node.move_to_pose(
-            {"joint_head_tilt": -0.2, "joint_head_pan": 0}, blocking=True
+            {"joint_head_tilt": -0.2, "joint_head_pan": 0.0}, blocking=True
         )
 
         def compute_distance_to_marker() -> float:

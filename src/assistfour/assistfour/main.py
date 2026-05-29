@@ -11,7 +11,6 @@ from rclpy.executors import MultiThreadedExecutor
 # noinspection PyUnresolvedReferences
 from assistfour_interfaces.action import GetToken, GotoColumn
 
-from .constants import FEEDER_FRAME
 from .navigation_manager import NavigationManager
 
 if TYPE_CHECKING:
@@ -61,6 +60,7 @@ class Main(HelloNode):
 
         # Demo: move to column 4.
         # self.navigation_manager.move_to_column(4)
+        # self.navigation_manager.move_to_feeder()
 
         self.get_logger().info("Motion complete.")
 
