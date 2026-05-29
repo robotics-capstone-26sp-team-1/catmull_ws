@@ -18,6 +18,7 @@ from .constants import (
     RECENT_TF_POLL_TIME,
     RECENT_TF_TIMEOUT,
     COLUMN_MAP, FEEDER_FRAME,
+    WORLD_FRAME,
 )
 
 if TYPE_CHECKING:
