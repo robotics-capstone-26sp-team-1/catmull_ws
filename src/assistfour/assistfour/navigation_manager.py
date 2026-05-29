@@ -43,10 +43,19 @@ class NavigationManager:
         self.move_to_marker(FEEDER_FRAME)
 
     def return_to_start(self):
-        """Return robot to the designated start position."""
-        self.enter_travel_pose()
-        self.move_to_feeder()
-        self.enter_travel_pose()
+        """Return robot to odom origin."""
+    
+        tf = self._block_until_recent_tf(
+            WORLD_FRAME,
+            ROBOT_FRAME,
+        )
+    
+        self._node.move_to_pose(
+            {
+                "translate_mobile_base": -tf.transform.translation.x,
+            },
+            blocking=True,
+        )
 
     def move_to_marker(self, name: str):
         """High level operation to drive from anywhere to a marker and align arm to face it."""
