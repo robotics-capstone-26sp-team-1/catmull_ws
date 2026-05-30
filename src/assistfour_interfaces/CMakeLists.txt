@@ -25,7 +25,7 @@ if(BUILD_TESTING)
 endif()
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-    "action/GetToken.action"
+    "action/GotoMarker.action"
     "action/GotoColumn.action"
 )
 

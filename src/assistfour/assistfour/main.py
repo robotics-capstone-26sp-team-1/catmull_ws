@@ -9,7 +9,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 # noinspection PyUnresolvedReferences
-from assistfour_interfaces.action import GetToken, GotoColumn
+from assistfour_interfaces.action import GotoColumn, GotoMarker
 
 from .navigation_manager import NavigationManager
 
@@ -26,6 +26,7 @@ class Main(HelloNode):
         self._callback_group: ReentrantCallbackGroup | None = None
         self.get_token_action: ActionServer | None = None
         self.goto_column_action: ActionServer | None = None
+        self.return_to_start_action: ActionServer | None = None
 
         # Application components.
         self.navigation_manager = NavigationManager(self)
@@ -41,7 +42,7 @@ class Main(HelloNode):
         self._callback_group = ReentrantCallbackGroup()
         self.get_token_action = ActionServer(
             self,
-            GetToken,
+            GotoMarker,
             "get_token",
             execute_callback=self._get_token_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
@@ -57,6 +58,15 @@ class Main(HelloNode):
             cancel_callback=lambda _: CancelResponse.ACCEPT,
             callback_group=self._callback_group,
         )
+        self.return_to_start_action = ActionServer(
+            self,
+            GotoMarker,
+            "return_to_start",
+            execute_callback=self._return_to_start_execute,
+            goal_callback=lambda _: GoalResponse.ACCEPT,
+            cancel_callback=lambda _: CancelResponse.ACCEPT,
+            callback_group=self._callback_group,
+        )
 
         # Demo: move to column 4.
         # self.navigation_manager.move_to_column(4)
@@ -66,7 +76,14 @@ class Main(HelloNode):
 
     @staticmethod
     def _get_token_execute(goal_handle):
-        result = GetToken.Result()
+        result = GotoMarker.Result()
+        result.result = "Not implemented."
+        goal_handle.succeed()
+        return result
+
+    @staticmethod
+    def _return_to_start_execute(goal_handle):
+        result = GotoMarker.Result()
         result.result = "Not implemented."
         goal_handle.succeed()
         return result
