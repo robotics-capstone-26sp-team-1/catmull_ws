@@ -9,7 +9,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 # noinspection PyUnresolvedReferences
-from assistfour_interfaces.action import GetToken, GotoColumn
+from assistfour_interfaces.action import GotoColumn, GotoMarker
 
 from .navigation_manager import NavigationManager
 
@@ -24,7 +24,8 @@ class Main(HelloNode):
         # ROS components.
         self.vel_publisher: Publisher | None = None
         self._callback_group: ReentrantCallbackGroup | None = None
-        self.get_token_action: ActionServer | None = None
+        self.goto_marker_action: ActionServer | None = None
+        self.return_to_start_action: ActionServer | None = None
         self.goto_column_action: ActionServer | None = None
 
         # Application components.
@@ -39,11 +40,20 @@ class Main(HelloNode):
         # Initialize ROS components.
         self.vel_publisher = self.create_publisher(Twist, "/stretch/cmd_vel", 10)
         self._callback_group = ReentrantCallbackGroup()
-        self.get_token_action = ActionServer(
+        self.goto_marker_action = ActionServer(
             self,
-            GetToken,
-            "get_token",
-            execute_callback=self._get_token_execute,
+            GotoMarker,
+            "goto_marker",
+            execute_callback=self._goto_marker_execute,
+            goal_callback=lambda _: GoalResponse.ACCEPT,
+            cancel_callback=lambda _: CancelResponse.ACCEPT,
+            callback_group=self._callback_group,
+        )
+        self.return_to_start_action = ActionServer(
+            self,
+            GotoMarker,
+            "return_to_start",
+            execute_callback=self._return_to_start_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
             cancel_callback=lambda _: CancelResponse.ACCEPT,
             callback_group=self._callback_group,
@@ -65,8 +75,15 @@ class Main(HelloNode):
         self.get_logger().info("Motion complete.")
 
     @staticmethod
-    def _get_token_execute(goal_handle):
-        result = GetToken.Result()
+    def _goto_marker_execute(goal_handle):
+        result = GotoMarker.Result()
+        result.result = "Not implemented."
+        goal_handle.succeed()
+        return result
+
+    @staticmethod
+    def _return_to_start_execute(goal_handle):
+        result = GotoMarker.Result()
         result.result = "Not implemented."
         goal_handle.succeed()
         return result
