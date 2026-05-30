@@ -4,8 +4,13 @@ from typing import TYPE_CHECKING
 
 from geometry_msgs.msg import Twist
 from hello_helpers.hello_misc import HelloNode
+from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 
-from .constants import FEEDER_FRAME
+# noinspection PyUnresolvedReferences
+from assistfour_interfaces.action import GotoColumn, GotoMarker
+
 from .navigation_manager import NavigationManager
 
 if TYPE_CHECKING:
@@ -18,6 +23,10 @@ class Main(HelloNode):
 
         # ROS components.
         self.vel_publisher: Publisher | None = None
+        self._callback_group: ReentrantCallbackGroup | None = None
+        self.get_token_action: ActionServer | None = None
+        self.goto_column_action: ActionServer | None = None
+        self.return_to_start_action: ActionServer | None = None
 
         # Application components.
         self.navigation_manager = NavigationManager(self)
@@ -30,11 +39,61 @@ class Main(HelloNode):
 
         # Initialize ROS components.
         self.vel_publisher = self.create_publisher(Twist, "/stretch/cmd_vel", 10)
+        self._callback_group = ReentrantCallbackGroup()
+        self.get_token_action = ActionServer(
+            self,
+            GotoMarker,
+            "get_token",
+            execute_callback=self._get_token_execute,
+            goal_callback=lambda _: GoalResponse.ACCEPT,
+            cancel_callback=lambda _: CancelResponse.ACCEPT,
+            callback_group=self._callback_group,
+        )
+        self.goto_column_action = ActionServer(
+            self,
+            GotoColumn,
+            "goto_column",
+            execute_callback=self._goto_column_execute,
+            goal_callback=lambda _: GoalResponse.ACCEPT,
+            cancel_callback=lambda _: CancelResponse.ACCEPT,
+            callback_group=self._callback_group,
+        )
+        self.return_to_start_action = ActionServer(
+            self,
+            GotoMarker,
+            "return_to_start",
+            execute_callback=self._return_to_start_execute,
+            goal_callback=lambda _: GoalResponse.ACCEPT,
+            cancel_callback=lambda _: CancelResponse.ACCEPT,
+            callback_group=self._callback_group,
+        )
 
         # Demo: move to column 4.
-        self.navigation_manager.move_to_column(4)
+        # self.navigation_manager.move_to_column(4)
+        # self.navigation_manager.move_to_feeder()
 
         self.get_logger().info("Motion complete.")
+
+    @staticmethod
+    def _get_token_execute(goal_handle):
+        result = GotoMarker.Result()
+        result.result = "Not implemented."
+        goal_handle.succeed()
+        return result
+
+    @staticmethod
+    def _return_to_start_execute(goal_handle):
+        result = GotoMarker.Result()
+        result.result = "Not implemented."
+        goal_handle.succeed()
+        return result
+
+    @staticmethod
+    def _goto_column_execute(goal_handle):
+        result = GotoColumn.Result()
+        result.result = "Not implemented."
+        goal_handle.succeed()
+        return result
 
 
 def main():
@@ -42,7 +101,9 @@ def main():
 
     try:
         assistfour.main()
-        assistfour.new_thread.join()
+        executor = MultiThreadedExecutor()
+        executor.add_node(assistfour)
+        executor.spin()
     except KeyboardInterrupt:
         assistfour.destroy_node()
 
