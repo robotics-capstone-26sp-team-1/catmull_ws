@@ -9,7 +9,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 # noinspection PyUnresolvedReferences
-from assistfour_interfaces.action import GotoColumn, GotoMarker
+from assistfour_interfaces.action import GotoColumn, GotoMarker, ReturnToStart
 
 from .navigation_manager import NavigationManager
 
@@ -51,7 +51,7 @@ class Main(HelloNode):
         )
         self.return_to_start_action = ActionServer(
             self,
-            GotoMarker,
+            ReturnToStart,
             "return_to_start",
             execute_callback=self._return_to_start_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
@@ -83,7 +83,7 @@ class Main(HelloNode):
 
     @staticmethod
     def _return_to_start_execute(goal_handle):
-        result = GotoMarker.Result()
+        result = ReturnToStart.Result()
         result.result = "Not implemented."
         goal_handle.succeed()
         return result
