@@ -67,7 +67,10 @@ class NavigationManager:
         # Define spin loop.
         def spin():
             # Exit if search spin is stopping or publisher is not ready.
-            if self._search_spin_stop_event.is_set() or self._node.vel_publisher is None:
+            if (
+                self._search_spin_stop_event.is_set()
+                or self._node.vel_publisher is None
+            ):
                 return
 
             # Continue spinning.

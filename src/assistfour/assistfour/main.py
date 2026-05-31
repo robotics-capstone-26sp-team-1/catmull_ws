@@ -52,7 +52,7 @@ class Main(HelloNode):
         self.play_column_action = ActionServer(
             self,
             PlayColumn,
-            "playcolumn",
+            "play_column",
             execute_callback=self._play_column_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
             cancel_callback=lambda _: CancelResponse.ACCEPT,
@@ -70,7 +70,7 @@ class Main(HelloNode):
 
         # Demo: move to column 4.
         # self.navigation_manager.move_to_column(4)
-        # self.navigation_manager.move_to_feeder()
+        self.navigation_manager.move_to_feeder()
 
         self.get_logger().info("Motion complete.")
 
