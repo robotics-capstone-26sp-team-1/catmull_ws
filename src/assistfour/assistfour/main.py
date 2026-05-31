@@ -9,7 +9,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 # noinspection PyUnresolvedReferences
-from assistfour_interfaces.action import GotoColumn, GotoMarker
+from assistfour_interfaces.action import GotoMarker, PlayColumn
 
 from .navigation_manager import NavigationManager
 
@@ -25,7 +25,7 @@ class Main(HelloNode):
         self.vel_publisher: Publisher | None = None
         self._callback_group: ReentrantCallbackGroup | None = None
         self.get_token_action: ActionServer | None = None
-        self.goto_column_action: ActionServer | None = None
+        self.play_column_action: ActionServer | None = None
         self.return_to_start_action: ActionServer | None = None
 
         # Application components.
@@ -49,11 +49,11 @@ class Main(HelloNode):
             cancel_callback=lambda _: CancelResponse.ACCEPT,
             callback_group=self._callback_group,
         )
-        self.goto_column_action = ActionServer(
+        self.play_column_action = ActionServer(
             self,
-            GotoColumn,
-            "goto_column",
-            execute_callback=self._goto_column_execute,
+            PlayColumn,
+            "playcolumn",
+            execute_callback=self._play_column_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
             cancel_callback=lambda _: CancelResponse.ACCEPT,
             callback_group=self._callback_group,
@@ -89,8 +89,8 @@ class Main(HelloNode):
         return result
 
     @staticmethod
-    def _goto_column_execute(goal_handle):
-        result = GotoColumn.Result()
+    def _play_column_execute(goal_handle):
+        result = PlayColumn.Result()
         result.result = "Not implemented."
         goal_handle.succeed()
         return result

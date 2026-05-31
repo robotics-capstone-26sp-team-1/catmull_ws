@@ -26,7 +26,7 @@ endif()
 
 rosidl_generate_interfaces(${PROJECT_NAME}
     "action/GotoMarker.action"
-    "action/GotoColumn.action"
+    "action/PlayColumn.action"
 )
 
 ament_package()
