@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from threading import Thread, Event
-from math import atan2, radians, sqrt
+from math import atan2, radians
 from typing import TYPE_CHECKING
 from time import monotonic, sleep
 from geometry_msgs.msg import Twist, TransformStamped
@@ -16,10 +16,13 @@ from .constants import (
     MINIMUM_ANGLE_THRESHOLD,
     MAX_TF_AGE,
     RECENT_TF_POLL_TIME,
+    OFFSET_FROM_MARKER,
+    WRIST_DOWN,
+    LIFT_MID_HEIGHT,
+    HEAD_SEARCH_TILT,
     RECENT_TF_TIMEOUT,
     COLUMN_MAP,
     FEEDER_FRAME,
-    WORLD_FRAME,
 )
 
 if TYPE_CHECKING:
@@ -44,8 +47,8 @@ class NavigationManager:
 
     def move_to_marker(self, name: str):
         """High level operation to drive from anywhere to a marker and align arm to face it."""
-        self.point_at_marker(name, True, 0.5, 0)
-        self.drive_to_marker(name, 0.5)
+        self.point_at_marker(name, True, OFFSET_FROM_MARKER, 0)
+        self.drive_to_marker(name, OFFSET_FROM_MARKER)
         self.point_at_marker(name, False, 0, -90)
 
     def point_at_marker(
@@ -59,7 +62,8 @@ class NavigationManager:
 
         # Look down slightly (markers are lower than head).
         self._node.move_to_pose(
-            {"joint_head_tilt": -0.2, "joint_head_pan": pan_offset_rad}, blocking=True
+            {"joint_head_tilt": HEAD_SEARCH_TILT, "joint_head_pan": pan_offset_rad},
+            blocking=True,
         )
 
         # Switch to navigation mode.
@@ -116,7 +120,7 @@ class NavigationManager:
         self._node.switch_to_position_mode()
 
         def compute_angle_to_marker() -> float:
-            tf = self._block_until_recent_tf(ROBOT_FRAME, name)
+            tf = self.block_until_recent_tf(ROBOT_FRAME, name)
 
             # Compute angle based on location.
             target_point_x, target_point_y = self._target_xy_from_tf(tf, forward_offset)
@@ -148,11 +152,11 @@ class NavigationManager:
 
         # Look down slightly and align to drive direction.
         self._node.move_to_pose(
-            {"joint_head_tilt": -0.2, "joint_head_pan": 0.0}, blocking=True
+            {"joint_head_tilt": HEAD_SEARCH_TILT, "joint_head_pan": 0.0}, blocking=True
         )
 
         def compute_distance_to_marker() -> float:
-            tf = self._block_until_recent_tf(ROBOT_FRAME, name)
+            tf = self.block_until_recent_tf(ROBOT_FRAME, name)
 
             target_point_x, _ = self._target_xy_from_tf(tf, forward_offset)
             self._node.get_logger().info(f"Distance to marker: {target_point_x}")
@@ -169,36 +173,16 @@ class NavigationManager:
         """Move the arm into a safe pose for traveling."""
         self._node.move_to_pose(
             {
-                "joint_wrist_pitch": -1.6,
+                "joint_wrist_pitch": WRIST_DOWN,
                 "joint_wrist_roll": 0.0,
                 "joint_wrist_yaw": 0.0,
-                "joint_lift": 0.45,
+                "joint_lift": LIFT_MID_HEIGHT,
                 "joint_arm": 0.0,
             },
             blocking=True,
         )
 
-    def return_to_start(self):
-        tf = self._node.get_tf(ROBOT_FRAME, WORLD_FRAME)
-        target_point_x, target_point_y = self._target_xy_from_tf(tf, 0)
-        angle = atan2(target_point_y, target_point_x)
-        distance = sqrt(target_point_x ** 2 + target_point_y ** 2)
-        self._node.move_to_pose({"rotate_mobile_base": angle}, blocking=True)
-        self._node.move_to_pose({"translate_mobile_base": distance}, blocking=True)
-
-    def _get_recent_tf(self, source: str, target: str) -> TransformStamped | None:
-        """Returns TF if within MAX_TF_AGE seconds old."""
-        tf = self._node.get_tf(source, target)
-        if tf is not None:
-            current_time = self._node.get_clock().now()
-            tf_age = (current_time - Time.from_msg(tf.header.stamp)).nanoseconds / 1e9
-            # self._node.get_logger().info(f"{target} TF age: {tf_age:.3f} seconds.")
-            if tf_age <= MAX_TF_AGE:
-                return tf
-
-        return None
-
-    def _block_until_recent_tf(self, source: str, target: str) -> TransformStamped:
+    def block_until_recent_tf(self, source: str, target: str) -> TransformStamped:
         """Block until a recent TF is found."""
         start_time = monotonic()
         tf = self._get_recent_tf(source, target)
@@ -212,6 +196,18 @@ class NavigationManager:
             tf = self._get_recent_tf(source, target)
 
         return tf
+
+    def _get_recent_tf(self, source: str, target: str) -> TransformStamped | None:
+        """Returns TF if within MAX_TF_AGE seconds old."""
+        tf = self._node.get_tf(source, target)
+        if tf is not None:
+            current_time = self._node.get_clock().now()
+            tf_age = (current_time - Time.from_msg(tf.header.stamp)).nanoseconds / 1e9
+            # self._node.get_logger().info(f"{target} TF age: {tf_age:.3f} seconds.")
+            if tf_age <= MAX_TF_AGE:
+                return tf
+
+        return None
 
     @staticmethod
     def _target_xy_from_tf(

@@ -12,6 +12,7 @@ from rclpy.executors import MultiThreadedExecutor
 from assistfour_interfaces.action import GotoMarker, PlayColumn
 
 from .navigation_manager import NavigationManager
+from .token_manager import TokenManager
 
 if TYPE_CHECKING:
     from rclpy.publisher import Publisher
@@ -30,6 +31,7 @@ class Main(HelloNode):
 
         # Application components.
         self.navigation_manager = NavigationManager(self)
+        self.token_manager = TokenManager(self, self.navigation_manager)
 
     def main(self, **kwargs):
         HelloNode.main(self, "main", "main", wait_for_first_pointcloud=False)
@@ -69,9 +71,10 @@ class Main(HelloNode):
         )
 
         # Demo: move to column 4.
-        # self.navigation_manager.move_to_column(4)
         # self.navigation_manager.move_to_feeder()
-        self.navigation_manager.return_to_start()
+        # self.token_manager.grab_token()
+        # self.navigation_manager.move_to_column(4)
+        self.token_manager.place_token()
         self.get_logger().info("Motion complete.")
 
     @staticmethod
