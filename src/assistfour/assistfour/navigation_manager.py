@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sympy import false
 from threading import Thread, Event
 from math import atan2, radians, sqrt
 from typing import TYPE_CHECKING
@@ -180,6 +181,7 @@ class NavigationManager:
         )
 
     def return_to_start(self):
+        self.point_at_marker(WORLD_FRAME, false, 0, 0)
         tf = self.block_until_recent_tf(ROBOT_FRAME, WORLD_FRAME)
         target_point_x = tf.transform.translation.x
         target_point_y = tf.transform.translation.y

@@ -59,6 +59,7 @@ class TokenManager:
         # Lift arm.
         self._node.checked_pose_move(
             {
+                "translate_mobile_base": end_to_feeder.transform.translation.y,
                 "joint_lift": target_lift_height,
             }
         )
@@ -106,6 +107,7 @@ class TokenManager:
         # Lift arm.
         self._node.checked_pose_move(
             {
+                "translate_mobile_base": end_to_feeder.transform.translation.y,
                 "joint_lift": target_lift_height,
             }
         )

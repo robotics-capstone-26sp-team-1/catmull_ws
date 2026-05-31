@@ -32,8 +32,7 @@ MARKER_SEARCH_PERIOD = 0.5  # seconds (2 Hz); must be >= 2 Hz (<= 0.5 seconds)
 MAX_FORWARD_SPEED = 0.2  # m / sec
 
 # Minimums
-MINIMUM_ANGLE_THRESHOLD = 0.05  # rad
-MINIMUM_FORWARD_DISTANCE_THRESHOLD = 0.1  # m
+MINIMUM_ANGLE_THRESHOLD = 0.04  # rad
 
 # Offsets.
 OFFSET_FROM_MARKER = 0.55
