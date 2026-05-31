@@ -97,7 +97,7 @@ class NavigationManager:
         self._search_spin_loop = self._node.create_timer(MARKER_SEARCH_PERIOD, spin)
 
         # Do search (non-blocking for executor/timers).
-        search_thread = Thread(target=search)
+        search_thread = Thread(target=search, daemon=True)
         search_thread.start()
 
         # Wait for search to complete.
