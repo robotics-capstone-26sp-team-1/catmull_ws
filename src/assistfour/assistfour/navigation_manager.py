@@ -61,9 +61,8 @@ class NavigationManager:
         pan_offset_rad = radians(pan_offset_deg)
 
         # Look down slightly (markers are lower than head).
-        self._node.move_to_pose(
-            {"joint_head_tilt": HEAD_SEARCH_TILT, "joint_head_pan": pan_offset_rad},
-            blocking=True,
+        self._node.checked_pose_move(
+            {"joint_head_tilt": HEAD_SEARCH_TILT, "joint_head_pan": pan_offset_rad}
         )
 
         # Switch to navigation mode.
@@ -82,6 +81,7 @@ class NavigationManager:
             command = Twist()
             command.angular.z = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
             self._node.vel_publisher.publish(command)
+            self._node.check_canceled()
 
         # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
         def search():
@@ -94,6 +94,7 @@ class NavigationManager:
 
                 # Wait 1/4 second before trying again.
                 sleep(0.25)
+                self._node.check_canceled()
 
         # Reset search state.
         self._search_spin_stop_event.clear()
@@ -137,9 +138,7 @@ class NavigationManager:
         while abs(angle_to_marker) > MINIMUM_ANGLE_THRESHOLD:
             # Rotate.
             self._node.get_logger().info(f"Correcting by {angle_to_marker}...")
-            self._node.move_to_pose(
-                {"rotate_mobile_base": angle_to_marker}, blocking=True
-            )
+            self._node.checked_pose_move({"rotate_mobile_base": angle_to_marker})
 
             # Compute current angle.
             angle_to_marker = compute_angle_to_marker()
@@ -151,8 +150,8 @@ class NavigationManager:
         self.enter_travel_pose()
 
         # Look down slightly and align to drive direction.
-        self._node.move_to_pose(
-            {"joint_head_tilt": HEAD_SEARCH_TILT, "joint_head_pan": 0.0}, blocking=True
+        self._node.checked_pose_move(
+            {"joint_head_tilt": HEAD_SEARCH_TILT, "joint_head_pan": 0.0}
         )
 
         def compute_distance_to_marker() -> float:
@@ -164,22 +163,19 @@ class NavigationManager:
 
         # Approach.
         distance_to_marker = compute_distance_to_marker()
-        self._node.move_to_pose(
-            {"translate_mobile_base": distance_to_marker}, blocking=True
-        )
+        self._node.checked_pose_move({"translate_mobile_base": distance_to_marker})
         self._node.get_logger().info("At marker!")
 
     def enter_travel_pose(self):
         """Move the arm into a safe pose for traveling."""
-        self._node.move_to_pose(
+        self._node.checked_pose_move(
             {
                 "joint_wrist_pitch": WRIST_DOWN,
                 "joint_wrist_roll": 0.0,
                 "joint_wrist_yaw": 0.0,
                 "joint_lift": LIFT_MID_HEIGHT,
                 "joint_arm": 0.0,
-            },
-            blocking=True,
+            }
         )
 
     def block_until_recent_tf(self, source: str, target: str) -> TransformStamped:

@@ -27,9 +27,8 @@ class TokenManager:
 
     def grab_token(self):
         # Prepare gripper.
-        self._node.move_to_pose(
-            {"joint_wrist_pitch": WRIST_UP, "gripper_aperture": GRIPPER_OPEN},
-            blocking=True,
+        self._node.checked_pose_move(
+            {"joint_wrist_pitch": WRIST_UP, "gripper_aperture": GRIPPER_OPEN}
         )
 
         # Force the TF to refresh.
@@ -56,27 +55,25 @@ class TokenManager:
         )
 
         # Lift arm.
-        self._node.move_to_pose(
+        self._node.checked_pose_move(
             {
                 "joint_lift": target_lift_height,
-            },
-            blocking=True,
+            }
         )
 
         # Extend arm.
-        self._node.move_to_pose({"joint_arm": target_arm_extent}, blocking=True)
+        self._node.checked_pose_move({"joint_arm": target_arm_extent})
 
         # Close the gripper.
-        self._node.move_to_pose({"gripper_aperture": GRIPPER_CLOSE}, blocking=True)
+        self._node.checked_pose_move({"gripper_aperture": GRIPPER_CLOSE})
 
         # Raise to clear the holder.
-        self._node.move_to_pose(
-            {"joint_lift": lift_height + end_to_feeder.transform.translation.z},
-            blocking=True,
+        self._node.checked_pose_move(
+            {"joint_lift": lift_height + end_to_feeder.transform.translation.z}
         )
 
         # Retract arm.
-        self._node.move_to_pose({"joint_arm": 0.0}, blocking=True)
+        self._node.checked_pose_move({"joint_arm": 0.0})
 
         # Return to travel pose.
         self._navigation_manager.enter_travel_pose()
@@ -84,7 +81,7 @@ class TokenManager:
 
     def place_token(self, column: int):
         # Ensure gripper is closed.
-        self._node.move_to_pose({"gripper_aperture": GRIPPER_CLOSE}, blocking=True)
+        self._node.checked_pose_move({"gripper_aperture": GRIPPER_CLOSE})
 
         # Force the TF to refresh.
         sleep(1)
@@ -106,26 +103,25 @@ class TokenManager:
         target_arm_extent = arm_extent + end_to_feeder.transform.translation.z + 0.05
 
         # Lift arm.
-        self._node.move_to_pose(
+        self._node.checked_pose_move(
             {
                 "joint_lift": target_lift_height,
-            },
-            blocking=True,
+            }
         )
 
         # Rotate arm
-        self._node.move_to_pose({"joint_wrist_roll": radians(90)}, blocking=True)
+        self._node.checked_pose_move({"joint_wrist_roll": radians(90)})
 
         # Extend arm.
-        self._node.move_to_pose({"joint_arm": target_arm_extent}, blocking=True)
+        self._node.checked_pose_move({"joint_arm": target_arm_extent})
 
         # Close the gripper.
-        self._node.move_to_pose({"gripper_aperture": GRIPPER_OPEN}, blocking=True)
+        self._node.checked_pose_move({"gripper_aperture": GRIPPER_OPEN})
 
         sleep(1)
 
         # Retract arm.
-        self._node.move_to_pose({"joint_arm": 0.0}, blocking=True)
+        self._node.checked_pose_move({"joint_arm": 0.0})
 
         # Return to travel pose.
         self._navigation_manager.enter_travel_pose()
