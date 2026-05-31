@@ -33,7 +33,6 @@ class NavigationManager:
         # Marker searching.
         self._search_spin_loop: Timer | None = None
         self._search_spin_stop_event = Event()
-        self._marker_found = False
 
     def move_to_column(self, column_number: int):
         frame_name = COLUMN_MAP[column_number]
@@ -83,14 +82,12 @@ class NavigationManager:
                 tf = self._get_recent_tf(ROBOT_FRAME, name)
 
                 if tf is not None:
-                    self._marker_found = True
                     break
 
                 # Wait 1/4 second before trying again.
                 sleep(0.25)
 
         # Reset search state.
-        self._marker_found = False
         self._search_spin_stop_event.clear()
 
         # Do spin.
