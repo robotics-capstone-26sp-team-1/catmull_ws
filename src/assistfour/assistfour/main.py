@@ -8,6 +8,7 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from threading import Event
+from .constants import GRIPPER_CLOSE, GRIPPER_OPEN
 
 # noinspection PyUnresolvedReferences
 from assistfour_interfaces.action import GotoMarker, PlayColumn
@@ -72,13 +73,12 @@ class Main(HelloNode):
             callback_group=self._callback_group,
         )
 
-        # Demo: move to column 4.
+        # self.checked_pose_move({"gripper_aperture": GRIPPER_CLOSE})
+        # self.navigation_manager.move_to_column(6)
+        # self.token_manager.place_token(6)
         self.navigation_manager.move_to_feeder()
         self.token_manager.grab_token()
-        self.navigation_manager.return_to_start()
-        self.navigation_manager.move_to_column(4)
-        self.token_manager.place_token(4)
-        self.navigation_manager.return_to_start()
+        self.checked_pose_move({"gripper_aperture": GRIPPER_OPEN})
         self.get_logger().info("Motion complete.")
 
     def check_canceled(self):

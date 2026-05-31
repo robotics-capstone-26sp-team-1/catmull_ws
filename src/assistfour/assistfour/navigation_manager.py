@@ -17,7 +17,8 @@ from .constants import (
     MINIMUM_ANGLE_THRESHOLD,
     MAX_TF_AGE,
     RECENT_TF_POLL_TIME,
-    OFFSET_FROM_MARKER,
+    OFFSET_FROM_FEEDER,
+    OFFSET_FROM_COLUMN,
     WRIST_DOWN,
     LIFT_MID_HEIGHT,
     HEAD_SEARCH_TILT,
@@ -42,15 +43,15 @@ class NavigationManager:
 
     def move_to_column(self, column_number: int):
         frame_name = COLUMN_MAP[column_number]
-        self.move_to_marker(frame_name)
+        self.move_to_marker(frame_name, OFFSET_FROM_COLUMN)
 
     def move_to_feeder(self):
-        self.move_to_marker(FEEDER_FRAME)
+        self.move_to_marker(FEEDER_FRAME, OFFSET_FROM_FEEDER)
 
-    def move_to_marker(self, name: str):
+    def move_to_marker(self, name: str, offset: float):
         """High level operation to drive from anywhere to a marker and align arm to face it."""
-        self.point_at_marker(name, True, OFFSET_FROM_MARKER, 0)
-        self.drive_to_marker(name, OFFSET_FROM_MARKER)
+        self.point_at_marker(name, True, offset, 0)
+        self.drive_to_marker(name, offset)
         self.point_at_marker(name, False, 0, -90)
 
     def point_at_marker(
