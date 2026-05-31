@@ -77,8 +77,8 @@ class Main(HelloNode):
         # self.navigation_manager.move_to_column(6)
         # self.token_manager.place_token(6)
         self.navigation_manager.move_to_feeder()
-        self.token_manager.grab_token()
-        self.checked_pose_move({"gripper_aperture": GRIPPER_OPEN})
+        self.navigation_manager.return_to_start()
+
         self.get_logger().info("Motion complete.")
 
     def check_canceled(self):

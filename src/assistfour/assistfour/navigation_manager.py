@@ -55,7 +55,7 @@ class NavigationManager:
         self.point_at_marker(name, False, 0, -90)
 
     def point_at_marker(
-            self, name: str, clockwise: bool, forward_offset: float, pan_offset_deg: float
+        self, name: str, clockwise: bool, forward_offset: float, pan_offset_deg: float
     ):
         # Enter travel pose.
         self.enter_travel_pose()
@@ -75,8 +75,8 @@ class NavigationManager:
         def spin():
             # Exit if search spin is stopping or publisher is not ready.
             if (
-                    self._search_spin_stop_event.is_set()
-                    or self._node.vel_publisher is None
+                self._search_spin_stop_event.is_set()
+                or self._node.vel_publisher is None
             ):
                 return
 
@@ -183,14 +183,31 @@ class NavigationManager:
 
     def return_to_start(self):
         self.enter_travel_pose()
-        self.point_at_marker(WORLD_FRAME, false, 0, 0)
 
+        # Point at start.
+        def compute_angle_to_start() -> float:
+            tf = self.block_until_recent_tf(ROBOT_FRAME, WORLD_FRAME)
+            target_point_x = tf.transform.translation.x
+            target_point_y = tf.transform.translation.y
+            return atan2(target_point_y, target_point_x)
+
+        # Iterative refinement.
+        angle_to_start = compute_angle_to_start()
+        while abs(angle_to_start) > MINIMUM_ANGLE_THRESHOLD:
+            # Rotate.
+            self._node.get_logger().info(f"Correcting by {angle_to_start}...")
+            self._node.checked_pose_move({"rotate_mobile_base": angle_to_start})
+
+            # Compute current angle.
+            angle_to_start = compute_angle_to_start()
+
+        # Compute distance
         tf = self.block_until_recent_tf(ROBOT_FRAME, WORLD_FRAME)
         target_point_x = tf.transform.translation.x
         target_point_y = tf.transform.translation.y
-        # angle = atan2(target_point_y, target_point_x)
-        distance = sqrt(target_point_x * target_point_x + target_point_y * target_point_y)
-        # self._node.checked_pose_move({"rotate_mobile_base": angle})
+        distance = sqrt(
+            target_point_x * target_point_x + target_point_y * target_point_y
+        )
         self._node.checked_pose_move({"translate_mobile_base": distance})
 
     def block_until_recent_tf(self, source: str, target: str) -> TransformStamped:
@@ -222,7 +239,7 @@ class NavigationManager:
 
     @staticmethod
     def _target_xy_from_tf(
-            tf: TransformStamped, forward_offset: float
+        tf: TransformStamped, forward_offset: float
     ) -> tuple[float, float]:
         """Compute the target point in the robot frame after applying the marker offset."""
         if forward_offset == 0:
