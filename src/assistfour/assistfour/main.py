@@ -25,7 +25,7 @@ class Main(HelloNode):
         self.vel_publisher: Publisher | None = None
         self._callback_group: ReentrantCallbackGroup | None = None
         self.get_token_action: ActionServer | None = None
-        self.playcolumn_action: ActionServer | None = None
+        self.play_column_action: ActionServer | None = None
         self.return_to_start_action: ActionServer | None = None
 
         # Application components.
@@ -49,11 +49,11 @@ class Main(HelloNode):
             cancel_callback=lambda _: CancelResponse.ACCEPT,
             callback_group=self._callback_group,
         )
-        self.playcolumn_action = ActionServer(
+        self.play_column_action = ActionServer(
             self,
             PlayColumn,
             "playcolumn",
-            execute_callback=self._playcolumn_execute,
+            execute_callback=self._play_column_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
             cancel_callback=lambda _: CancelResponse.ACCEPT,
             callback_group=self._callback_group,
@@ -89,7 +89,7 @@ class Main(HelloNode):
         return result
 
     @staticmethod
-    def _playcolumn_execute(goal_handle):
+    def _play_column_execute(goal_handle):
         result = PlayColumn.Result()
         result.result = "Not implemented."
         goal_handle.succeed()
