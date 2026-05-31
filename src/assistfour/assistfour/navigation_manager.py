@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from threading import Thread, Event
-from math import atan2, radians
+from math import atan2, radians, sqrt
 from typing import TYPE_CHECKING
 from time import monotonic, sleep
 from geometry_msgs.msg import Twist, TransformStamped
@@ -19,6 +19,7 @@ from .constants import (
     RECENT_TF_TIMEOUT,
     COLUMN_MAP,
     FEEDER_FRAME,
+    WORLD_FRAME,
 )
 
 if TYPE_CHECKING:
@@ -176,6 +177,14 @@ class NavigationManager:
             },
             blocking=True,
         )
+
+    def return_to_start(self):
+        tf = self._node.get_tf(ROBOT_FRAME, WORLD_FRAME)
+        target_point_x, target_point_y = self._target_xy_from_tf(tf, 0)
+        angle = atan2(target_point_y, target_point_x)
+        distance = sqrt(target_point_x ** 2 + target_point_y ** 2)
+        self._node.move_to_pose({"rotate_mobile_base": angle}, blocking=True)
+        self._node.move_to_pose({"translate_mobile_base": distance}, blocking=True)
 
     def _get_recent_tf(self, source: str, target: str) -> TransformStamped | None:
         """Returns TF if within MAX_TF_AGE seconds old."""
