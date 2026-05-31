@@ -70,8 +70,8 @@ class Main(HelloNode):
 
         # Demo: move to column 4.
         # self.navigation_manager.move_to_column(4)
-        self.navigation_manager.move_to_feeder()
-
+        # self.navigation_manager.move_to_feeder()
+        self.navigation_manager.return_to_start()
         self.get_logger().info("Motion complete.")
 
     @staticmethod
