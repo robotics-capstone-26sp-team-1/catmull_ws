@@ -11,9 +11,9 @@ from .constants import (
     WRIST_UP,
     GRIPPER_OPEN,
     GRIPPER_CLOSE,
-    COLUMN_4_FRAME,
+    COLUMN_MAP,
     FEEDER_ARM_OFFSET,
-    FEEDER_LIFT_OFFSET
+    FEEDER_LIFT_OFFSET,
 )
 
 if TYPE_CHECKING:
@@ -71,7 +71,8 @@ class TokenManager:
 
         # Raise to clear the holder.
         self._node.move_to_pose(
-            {"joint_lift": lift_height + end_to_feeder.transform.translation.z}, blocking=True
+            {"joint_lift": lift_height + end_to_feeder.transform.translation.z},
+            blocking=True,
         )
 
         # Retract arm.
@@ -81,14 +82,16 @@ class TokenManager:
         self._navigation_manager.enter_travel_pose()
         self._navigation_manager.return_to_start()
 
-    def place_token(self):
+    def place_token(self, column: int):
+        # Ensure gripper is closed.
         self._node.move_to_pose({"gripper_aperture": GRIPPER_CLOSE}, blocking=True)
+
         # Force the TF to refresh.
         sleep(1)
 
         # Get end to feeder.
         end_to_feeder = self._navigation_manager.block_until_recent_tf(
-            END_FRAME, COLUMN_4_FRAME
+            END_FRAME, COLUMN_MAP[column]
         )
 
         # Get current state.
@@ -99,14 +102,8 @@ class TokenManager:
         arm_extent = joint_state.position[arm_index]
 
         # Compute target positions
-        target_lift_height = (
-                lift_height - end_to_feeder.transform.translation.x + 0.35
-        )
-        target_arm_extent = (
-                arm_extent + end_to_feeder.transform.translation.z + 0.05
-        )
-        print(end_to_feeder.transform.translation)
-        return
+        target_lift_height = lift_height - end_to_feeder.transform.translation.x + 0.35
+        target_arm_extent = arm_extent + end_to_feeder.transform.translation.z + 0.05
 
         # Lift arm.
         self._node.move_to_pose(
@@ -117,12 +114,7 @@ class TokenManager:
         )
 
         # Rotate arm
-        self._node.move_to_pose(
-            {
-            "joint_wrist_roll": radians(90)
-            },
-            blocking=True
-        )
+        self._node.move_to_pose({"joint_wrist_roll": radians(90)}, blocking=True)
 
         # Extend arm.
         self._node.move_to_pose({"joint_arm": target_arm_extent}, blocking=True)
@@ -137,4 +129,3 @@ class TokenManager:
 
         # Return to travel pose.
         self._navigation_manager.enter_travel_pose()
-        # self._navigation_manager.return_to_start()
