@@ -47,3 +47,8 @@ GRIPPER_CLOSE = -0.05
 GRIPPER_OPEN = 0.3
 WRIST_UP = 0.0
 WRIST_DOWN = radians(-90)
+
+
+# Exceptions.
+class CancelGoalException(Exception):
+    pass

@@ -7,6 +7,7 @@ from hello_helpers.hello_misc import HelloNode
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
+from threading import Event
 
 # noinspection PyUnresolvedReferences
 from assistfour_interfaces.action import GotoMarker, PlayColumn
@@ -32,6 +33,7 @@ class Main(HelloNode):
         # Application components.
         self.navigation_manager = NavigationManager(self)
         self.token_manager = TokenManager(self, self.navigation_manager)
+        self.cancel_event = Event()
 
     def main(self, **kwargs):
         HelloNode.main(self, "main", "main", wait_for_first_pointcloud=False)
@@ -77,22 +79,38 @@ class Main(HelloNode):
         self.token_manager.place_token()
         self.get_logger().info("Motion complete.")
 
-    @staticmethod
-    def _get_token_execute(goal_handle):
+    def check_canceled(self):
+        """Raise an exception if canceled."""
+        if self.cancel_event.is_set():
+            raise CancelGoalException()
+
+    def checked_pose_move(self, trajectory: dict):
+        """Wrapper for move_to_pose that is blocking and will check for goal cancel state after."""
+        self.move_to_pose(trajectory, blocking=True)
+        self.check_canceled()
+
+    def _get_token_execute(self, goal_handle):
+        # Reset cancel event for goal.
+        self.cancel_event.clear()
+
         result = GotoMarker.Result()
         result.result = "Not implemented."
         goal_handle.succeed()
         return result
 
-    @staticmethod
-    def _return_to_start_execute(goal_handle):
+    def _return_to_start_execute(self, goal_handle):
+        # Reset cancel event for goal.
+        self.cancel_event.clear()
+
         result = GotoMarker.Result()
         result.result = "Not implemented."
         goal_handle.succeed()
         return result
 
-    @staticmethod
-    def _play_column_execute(goal_handle):
+    def _play_column_execute(self, goal_handle):
+        # Reset cancel event for goal.
+        self.cancel_event.clear()
+
         result = PlayColumn.Result()
         result.result = "Not implemented."
         goal_handle.succeed()

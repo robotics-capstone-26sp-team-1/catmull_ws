@@ -49,10 +49,10 @@ class TokenManager:
 
         # Compute target positions
         target_lift_height = (
-                lift_height + end_to_feeder.transform.translation.z - FEEDER_LIFT_OFFSET
+            lift_height + end_to_feeder.transform.translation.z - FEEDER_LIFT_OFFSET
         )
         target_arm_extent = (
-                arm_extent + end_to_feeder.transform.translation.x - FEEDER_ARM_OFFSET
+            arm_extent + end_to_feeder.transform.translation.x - FEEDER_ARM_OFFSET
         )
 
         # Lift arm.
