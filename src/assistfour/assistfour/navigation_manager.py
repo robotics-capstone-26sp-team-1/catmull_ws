@@ -181,13 +181,15 @@ class NavigationManager:
         )
 
     def return_to_start(self):
+        self.enter_travel_pose()
         self.point_at_marker(WORLD_FRAME, false, 0, 0)
+
         tf = self.block_until_recent_tf(ROBOT_FRAME, WORLD_FRAME)
         target_point_x = tf.transform.translation.x
         target_point_y = tf.transform.translation.y
-        angle = atan2(target_point_y, target_point_x)
+        # angle = atan2(target_point_y, target_point_x)
         distance = sqrt(target_point_x * target_point_x + target_point_y * target_point_y)
-        self._node.checked_pose_move({"rotate_mobile_base": angle})
+        # self._node.checked_pose_move({"rotate_mobile_base": angle})
         self._node.checked_pose_move({"translate_mobile_base": distance})
 
     def block_until_recent_tf(self, source: str, target: str) -> TransformStamped:
