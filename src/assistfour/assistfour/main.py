@@ -75,8 +75,9 @@ class Main(HelloNode):
         # Demo: move to column 4.
         # self.navigation_manager.move_to_feeder()
         # self.token_manager.grab_token()
-        # self.navigation_manager.move_to_column(4)
-        self.token_manager.place_token()
+        self.navigation_manager.move_to_column(4)
+        self.token_manager.place_token(4)
+        self.navigation_manager.return_to_start()
         self.get_logger().info("Motion complete.")
 
     def check_canceled(self):

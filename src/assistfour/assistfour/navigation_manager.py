@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from threading import Thread, Event
-from math import atan2, radians
+from math import atan2, radians, sqrt
 from typing import TYPE_CHECKING
 from time import monotonic, sleep
 from geometry_msgs.msg import Twist, TransformStamped
@@ -22,6 +22,7 @@ from .constants import (
     HEAD_SEARCH_TILT,
     RECENT_TF_TIMEOUT,
     COLUMN_MAP,
+    WORLD_FRAME,
     FEEDER_FRAME,
 )
 

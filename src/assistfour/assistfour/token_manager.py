@@ -12,6 +12,8 @@ from .constants import (
     GRIPPER_OPEN,
     GRIPPER_CLOSE,
     COLUMN_MAP,
+    COLUMN_LIFT_OFFSET,
+    COLUMN_ARM_OFFSET,
     FEEDER_ARM_OFFSET,
     FEEDER_LIFT_OFFSET,
 )
@@ -48,10 +50,10 @@ class TokenManager:
 
         # Compute target positions
         target_lift_height = (
-            lift_height + end_to_feeder.transform.translation.z - FEEDER_LIFT_OFFSET
+                lift_height + end_to_feeder.transform.translation.z - FEEDER_LIFT_OFFSET
         )
         target_arm_extent = (
-            arm_extent + end_to_feeder.transform.translation.x - FEEDER_ARM_OFFSET
+                arm_extent + end_to_feeder.transform.translation.x - FEEDER_ARM_OFFSET
         )
 
         # Lift arm.
@@ -98,8 +100,8 @@ class TokenManager:
         arm_extent = joint_state.position[arm_index]
 
         # Compute target positions
-        target_lift_height = lift_height - end_to_feeder.transform.translation.x + 0.35
-        target_arm_extent = arm_extent + end_to_feeder.transform.translation.z + 0.05
+        target_lift_height = lift_height - end_to_feeder.transform.translation.x + COLUMN_LIFT_OFFSET
+        target_arm_extent = arm_extent + end_to_feeder.transform.translation.z - COLUMN_ARM_OFFSET
 
         # Lift arm.
         self._node.checked_pose_move(
