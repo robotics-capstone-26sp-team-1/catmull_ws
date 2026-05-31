@@ -33,7 +33,6 @@ class NavigationManager:
         # Marker searching.
         self._search_spin_loop: Timer | None = None
         self._search_spin_stop_event = Event()
-        self._marker_found = False
 
     def move_to_column(self, column_number: int):
         frame_name = COLUMN_MAP[column_number]
@@ -67,20 +66,14 @@ class NavigationManager:
 
         # Define spin loop.
         def spin():
-            # Exit if spin loop is not running or publisher is not ready.
-            if self._search_spin_loop is None or self._node.vel_publisher is None:
+            # Exit if search spin is stopping or publisher is not ready.
+            if self._search_spin_stop_event.is_set() or self._node.vel_publisher is None:
                 return
 
-            # Not found yet.
-            if self._marker_found:
-                self._search_spin_loop.destroy()
-                self._node.stop_the_robot()
-                self._node.get_logger().info("Stopping search spin.")
-            else:
-                # Continue spinning.
-                command = Twist()
-                command.angular.z = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
-                self._node.vel_publisher.publish(command)
+            # Continue spinning.
+            command = Twist()
+            command.angular.z = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
+            self._node.vel_publisher.publish(command)
 
         # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
         def search():
@@ -89,14 +82,13 @@ class NavigationManager:
                 tf = self._get_recent_tf(ROBOT_FRAME, name)
 
                 if tf is not None:
-                    self._marker_found = True
                     break
 
                 # Wait 1/4 second before trying again.
                 sleep(0.25)
 
         # Reset search state.
-        self._marker_found = False
+        self._search_spin_stop_event.clear()
 
         # Do spin.
         self._search_spin_loop = self._node.create_timer(MARKER_SEARCH_PERIOD, spin)
@@ -107,6 +99,14 @@ class NavigationManager:
 
         # Wait for search to complete.
         search_thread.join()
+
+        # Stop search spin cleanly before proceeding.
+        self._search_spin_stop_event.set()
+        if self._search_spin_loop is not None:
+            self._search_spin_loop.destroy()
+            self._search_spin_loop = None
+        self._node.stop_the_robot()
+        self._node.get_logger().info("Stopping search spin.")
 
         # Switch back to position mode.
         self._node.switch_to_position_mode()
