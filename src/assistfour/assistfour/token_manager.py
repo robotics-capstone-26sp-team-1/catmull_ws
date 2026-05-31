@@ -77,7 +77,6 @@ class TokenManager:
 
         # Return to travel pose.
         self._navigation_manager.enter_travel_pose()
-        self._navigation_manager.return_to_start()
 
     def place_token(self, column: int):
         # Ensure gripper is closed.

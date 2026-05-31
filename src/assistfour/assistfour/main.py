@@ -94,8 +94,18 @@ class Main(HelloNode):
         self.cancel_event.clear()
 
         result = GotoMarker.Result()
-        result.result = "Not implemented."
-        goal_handle.succeed()
+        try:
+            self.navigation_manager.move_to_feeder()
+            self.token_manager.grab_token()
+            self.navigation_manager.return_to_start()
+
+            goal_handle.succeed()
+        except CancelGoalException:
+            msg = "Get Token Canceled by User."
+            self.get_logger().info(msg)
+            result.result = msg
+            goal_handle.canceled()
+
         return result
 
     def _return_to_start_execute(self, goal_handle):
@@ -103,8 +113,17 @@ class Main(HelloNode):
         self.cancel_event.clear()
 
         result = GotoMarker.Result()
-        result.result = "Not implemented."
-        goal_handle.succeed()
+
+        try:
+            self.navigation_manager.return_to_start()
+
+            goal_handle.succeed()
+        except CancelGoalException:
+            msg = "Return to Start Canceled by User."
+            self.get_logger().info(msg)
+            result.result = msg
+            goal_handle.canceled()
+
         return result
 
     def _play_column_execute(self, goal_handle):
