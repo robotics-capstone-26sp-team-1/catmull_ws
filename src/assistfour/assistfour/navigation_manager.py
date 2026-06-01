@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from sympy import false
 from threading import Thread, Event
 from math import atan2, radians, sqrt
 from typing import TYPE_CHECKING
@@ -41,7 +40,6 @@ class NavigationManager:
         self._search_spin_loop: Timer | None = None
         self._search_spin_stop_event = Event()
         self._rotate_alt = True
-
 
     def move_to_column(self, column_number: int):
         frame_name = COLUMN_MAP[column_number]

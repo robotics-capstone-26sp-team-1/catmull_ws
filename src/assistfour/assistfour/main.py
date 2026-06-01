@@ -8,7 +8,7 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from threading import Event
-from .constants import GRIPPER_CLOSE, GRIPPER_OPEN
+from .constants import CancelGoalException
 from time import sleep
 
 # noinspection PyUnresolvedReferences
