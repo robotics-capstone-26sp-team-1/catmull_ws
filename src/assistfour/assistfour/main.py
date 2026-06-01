@@ -9,6 +9,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from threading import Event
 from .constants import CancelGoalException
+from time import sleep
 
 # noinspection PyUnresolvedReferences
 from assistfour_interfaces.action import GotoMarker, PlayColumn
@@ -91,6 +92,7 @@ class Main(HelloNode):
         try:
             self.navigation_manager.move_to_feeder()
             self.token_manager.grab_token()
+            sleep(5)
             self.navigation_manager.return_to_start()
 
             goal_handle.succeed()
@@ -128,6 +130,7 @@ class Main(HelloNode):
             target_column = goal_handle.request.column
             self.navigation_manager.move_to_column(target_column)
             self.token_manager.place_token(target_column)
+            sleep(5)
             self.navigation_manager.return_to_start()
 
             goal_handle.succeed()
@@ -142,6 +145,7 @@ class Main(HelloNode):
     def _cancel_execute(self, _):
         self.cancel_event.set()
         self.stop_the_robot()
+        self.switch_to_position_mode()
         return CancelResponse.ACCEPT
 
 
