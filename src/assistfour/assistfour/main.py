@@ -9,7 +9,6 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from threading import Event
 from .constants import CancelGoalException
-from time import sleep
 
 # noinspection PyUnresolvedReferences
 from assistfour_interfaces.action import GotoMarker, PlayColumn
@@ -73,7 +72,6 @@ class Main(HelloNode):
             cancel_callback=self._cancel_execute,
             callback_group=self._callback_group,
         )
-
 
     def check_canceled(self):
         """Raise an exception if canceled."""
