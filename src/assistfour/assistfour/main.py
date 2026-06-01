@@ -7,11 +7,15 @@ from hello_helpers.hello_misc import HelloNode
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
+from threading import Event
+from .constants import GRIPPER_CLOSE, GRIPPER_OPEN
+from time import sleep
 
 # noinspection PyUnresolvedReferences
 from assistfour_interfaces.action import GotoMarker, PlayColumn
 
 from .navigation_manager import NavigationManager
+from .token_manager import TokenManager
 
 if TYPE_CHECKING:
     from rclpy.publisher import Publisher
@@ -30,6 +34,8 @@ class Main(HelloNode):
 
         # Application components.
         self.navigation_manager = NavigationManager(self)
+        self.token_manager = TokenManager(self, self.navigation_manager)
+        self.cancel_event = Event()
 
     def main(self, **kwargs):
         HelloNode.main(self, "main", "main", wait_for_first_pointcloud=False)
@@ -68,28 +74,69 @@ class Main(HelloNode):
             callback_group=self._callback_group,
         )
 
-        # Demo: move to column 4.
-        # self.navigation_manager.move_to_column(4)
-        # self.navigation_manager.move_to_feeder()
-        self.navigation_manager.return_to_start()
-        self.get_logger().info("Motion complete.")
+        for i in range(5):
+            self.navigation_manager.move_to_feeder()
+            self.token_manager.grab_token()
+            sleep(5)
+            self.navigation_manager.return_to_start()
+            self.navigation_manager.move_to_column(4)
+            self.token_manager.place_token(4)
+            sleep(5)
+            self.navigation_manager.return_to_start()
 
-    @staticmethod
-    def _get_token_execute(goal_handle):
+            self.get_logger().info("Motion complete.")
+
+    def check_canceled(self):
+        """Raise an exception if canceled."""
+        if self.cancel_event.is_set():
+            raise CancelGoalException()
+
+    def checked_pose_move(self, trajectory: dict):
+        """Wrapper for move_to_pose that is blocking and will check for goal cancel state after."""
+        self.move_to_pose(trajectory, blocking=True)
+        self.check_canceled()
+
+    def _get_token_execute(self, goal_handle):
+        # Reset cancel event for goal.
+        self.cancel_event.clear()
+
         result = GotoMarker.Result()
-        result.result = "Not implemented."
-        goal_handle.succeed()
+        try:
+            self.navigation_manager.move_to_feeder()
+            self.token_manager.grab_token()
+            self.navigation_manager.return_to_start()
+
+            goal_handle.succeed()
+        except CancelGoalException:
+            msg = "Get Token Canceled by User."
+            self.get_logger().info(msg)
+            result.result = msg
+            goal_handle.canceled()
+
         return result
 
-    @staticmethod
-    def _return_to_start_execute(goal_handle):
+    def _return_to_start_execute(self, goal_handle):
+        # Reset cancel event for goal.
+        self.cancel_event.clear()
+
         result = GotoMarker.Result()
-        result.result = "Not implemented."
-        goal_handle.succeed()
+
+        try:
+            self.navigation_manager.return_to_start()
+
+            goal_handle.succeed()
+        except CancelGoalException:
+            msg = "Return to Start Canceled by User."
+            self.get_logger().info(msg)
+            result.result = msg
+            goal_handle.canceled()
+
         return result
 
-    @staticmethod
-    def _play_column_execute(goal_handle):
+    def _play_column_execute(self, goal_handle):
+        # Reset cancel event for goal.
+        self.cancel_event.clear()
+
         result = PlayColumn.Result()
         result.result = "Not implemented."
         goal_handle.succeed()

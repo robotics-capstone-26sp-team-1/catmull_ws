@@ -1,3 +1,5 @@
+from math import radians
+
 # Frame names.
 ROBOT_FRAME = "base_link"
 WORLD_FRAME = "odom"
@@ -9,6 +11,7 @@ COLUMN_4_FRAME = "column_4"
 COLUMN_5_FRAME = "column_5"
 COLUMN_6_FRAME = "column_6"
 COLUMN_7_FRAME = "column_7"
+END_FRAME = "link_grasp_center"
 
 COLUMN_MAP = {
     1: COLUMN_1_FRAME,
@@ -27,7 +30,27 @@ RECENT_TF_TIMEOUT = 10.0  # seconds
 SEARCH_SPIN_RATE = 0.2  # rad / sec; must be <= Pi
 MARKER_SEARCH_PERIOD = 0.5  # seconds (2 Hz); must be >= 2 Hz (<= 0.5 seconds)
 MAX_FORWARD_SPEED = 0.2  # m / sec
-MINIMUM_FORWARD_DISTANCE_THRESHOLD = 0.1  # m
 
 # Minimums
-MINIMUM_ANGLE_THRESHOLD = 0.05
+MINIMUM_ANGLE_THRESHOLD = 0.04  # rad
+
+# Offsets.
+OFFSET_FROM_COLUMN = 0.55
+OFFSET_FROM_FEEDER = 0.65
+FEEDER_LIFT_OFFSET = 0.1
+FEEDER_ARM_OFFSET = 0.07
+COLUMN_LIFT_OFFSET = 0.2
+COLUMN_ARM_OFFSET = 0.05
+
+# Joint values.
+HEAD_SEARCH_TILT = -0.3
+LIFT_MID_HEIGHT = 0.45
+GRIPPER_CLOSE = -0.05
+GRIPPER_OPEN = 0.3
+WRIST_UP = 0.0
+WRIST_DOWN = radians(-90)
+
+
+# Exceptions.
+class CancelGoalException(Exception):
+    pass
