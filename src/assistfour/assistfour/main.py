@@ -88,6 +88,9 @@ class Main(HelloNode):
         # Reset cancel event for goal.
         self.cancel_event.clear()
 
+        # Defensively enforce position mode.
+        self.switch_to_position_mode()
+
         result = GotoMarker.Result()
         try:
             self.navigation_manager.move_to_feeder()
@@ -116,6 +119,9 @@ class Main(HelloNode):
         # Reset cancel event for goal.
         self.cancel_event.clear()
 
+        # Defensively enforce position mode.
+        self.switch_to_position_mode()
+
         result = GotoMarker.Result()
         try:
             self.navigation_manager.return_to_start()
@@ -140,6 +146,9 @@ class Main(HelloNode):
     def _play_column_execute(self, goal_handle):
         # Reset cancel event for goal.
         self.cancel_event.clear()
+
+        # Defensively enforce position mode.
+        self.switch_to_position_mode()
 
         result = PlayColumn.Result()
         try:
@@ -169,14 +178,12 @@ class Main(HelloNode):
     def _cancel_execute(self, _):
         self.cancel_event.set()
         self.stop_the_robot()
-        self.switch_to_position_mode()
         return CancelResponse.ACCEPT
 
     @staticmethod
     def _set_result(result, message: str):
         result.result = message
         return result
-
 
 
 def main():

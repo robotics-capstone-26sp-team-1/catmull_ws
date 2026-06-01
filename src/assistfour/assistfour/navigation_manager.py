@@ -25,6 +25,7 @@ from .constants import (
     COLUMN_MAP,
     WORLD_FRAME,
     FEEDER_FRAME,
+    CancelGoalException,
 )
 
 if TYPE_CHECKING:
@@ -73,7 +74,11 @@ class NavigationManager:
         self._node.switch_to_navigation_mode()
 
         # Define spin loop.
+        cancel_exc: CancelGoalException | None = None
+
         def spin():
+            nonlocal cancel_exc
+
             # Exit if search spin is stopping or publisher is not ready.
             if (
                 self._search_spin_stop_event.is_set()
@@ -81,24 +86,35 @@ class NavigationManager:
             ):
                 return
 
-            # Continue spinning.
-            command = Twist()
-            command.angular.z = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
-            self._node.vel_publisher.publish(command)
-            self._node.check_canceled()
+            try:
+                # Continue spinning.
+                command = Twist()
+                command.angular.z = -SEARCH_SPIN_RATE if clockwise else SEARCH_SPIN_RATE
+                self._node.vel_publisher.publish(command)
+                self._node.check_canceled()
+            except CancelGoalException as exc:
+                # Store the cancellation so point_at_marker can re-raise it on the main thread.
+                cancel_exc = exc
+                self._search_spin_stop_event.set()
 
         # Define search worker. get_tf can block, so this runs outside ROS timer callbacks.
         def search():
-            while not self._search_spin_stop_event.is_set():
-                # Try to find marker.
-                tf = self._get_recent_tf(ROBOT_FRAME, name)
+            nonlocal cancel_exc
 
-                if tf is not None:
-                    break
+            try:
+                while not self._search_spin_stop_event.is_set():
+                    # Try to find marker.
+                    tf = self._get_recent_tf(ROBOT_FRAME, name)
 
-                # Wait 1/4 second before trying again.
-                sleep(0.25)
-                self._node.check_canceled()
+                    if tf is not None:
+                        break
+
+                    # Wait 1/4 second before trying again.
+                    sleep(0.25)
+                    self._node.check_canceled()
+            except CancelGoalException as exc:
+                cancel_exc = exc
+                self._search_spin_stop_event.set()
 
         # Reset search state.
         self._search_spin_stop_event.clear()
@@ -123,6 +139,9 @@ class NavigationManager:
 
         # Switch back to position mode.
         self._node.switch_to_position_mode()
+
+        if cancel_exc is not None:
+            raise cancel_exc
 
         def compute_angle_to_marker() -> float:
             tf = self.block_until_recent_tf(ROBOT_FRAME, name)
