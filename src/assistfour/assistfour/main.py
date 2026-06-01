@@ -107,7 +107,8 @@ class Main(HelloNode):
             goal_handle.abort()
             return result
 
-        self._set_result(result, "Get Token completed successfully.")
+        self.get_logger().info("Get Token Finished.")
+        self._set_result(result, "")
         goal_handle.succeed()
         return result
 
@@ -131,7 +132,8 @@ class Main(HelloNode):
             goal_handle.abort()
             return result
 
-        self._set_result(result, "Return to Start completed successfully.")
+        self.get_logger().info("Return to Start Finished.")
+        self._set_result(result, "")
         goal_handle.succeed()
         return result
 
@@ -159,7 +161,8 @@ class Main(HelloNode):
             goal_handle.abort()
             return result
 
-        self._set_result(result, "Play Column completed successfully.")
+        self.get_logger().info("Play Column Finished.")
+        self._set_result(result, "")
         goal_handle.succeed()
         return result
 
