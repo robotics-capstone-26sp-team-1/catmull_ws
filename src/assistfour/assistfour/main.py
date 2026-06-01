@@ -52,7 +52,7 @@ class Main(HelloNode):
             "get_token",
             execute_callback=self._get_token_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
-            cancel_callback=lambda _: CancelResponse.ACCEPT,
+            cancel_callback=self._cancel_execute,
             callback_group=self._callback_group,
         )
         self.play_column_action = ActionServer(
@@ -61,7 +61,7 @@ class Main(HelloNode):
             "play_column",
             execute_callback=self._play_column_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
-            cancel_callback=lambda _: CancelResponse.ACCEPT,
+            cancel_callback=self._cancel_execute,
             callback_group=self._callback_group,
         )
         self.return_to_start_action = ActionServer(
@@ -70,21 +70,9 @@ class Main(HelloNode):
             "return_to_start",
             execute_callback=self._return_to_start_execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
-            cancel_callback=lambda _: CancelResponse.ACCEPT,
+            cancel_callback=self._cancel_execute,
             callback_group=self._callback_group,
         )
-
-        for i in range(5):
-            self.navigation_manager.move_to_feeder()
-            self.token_manager.grab_token()
-            sleep(5)
-            self.navigation_manager.return_to_start()
-            self.navigation_manager.move_to_column(4)
-            self.token_manager.place_token(4)
-            sleep(5)
-            self.navigation_manager.return_to_start()
-
-            self.get_logger().info("Motion complete.")
 
     def check_canceled(self):
         """Raise an exception if canceled."""
@@ -100,46 +88,101 @@ class Main(HelloNode):
         # Reset cancel event for goal.
         self.cancel_event.clear()
 
+        # Defensively enforce position mode.
+        self.switch_to_position_mode()
+
         result = GotoMarker.Result()
         try:
             self.navigation_manager.move_to_feeder()
             self.token_manager.grab_token()
+            sleep(5)
             self.navigation_manager.return_to_start()
-
-            goal_handle.succeed()
         except CancelGoalException:
-            msg = "Get Token Canceled by User."
+            msg = "Get Token canceled by user."
             self.get_logger().info(msg)
-            result.result = msg
+            self._set_result(result, msg)
             goal_handle.canceled()
+            return result
+        except ValueError as exc:
+            msg = f"Get Token failed: {exc}"
+            self.get_logger().error(msg)
+            self._set_result(result, msg)
+            goal_handle.abort()
+            return result
 
+        self.get_logger().info("Get Token Finished.")
+        self._set_result(result, "")
+        goal_handle.succeed()
         return result
 
     def _return_to_start_execute(self, goal_handle):
         # Reset cancel event for goal.
         self.cancel_event.clear()
 
-        result = GotoMarker.Result()
+        # Defensively enforce position mode.
+        self.switch_to_position_mode()
 
+        result = GotoMarker.Result()
         try:
             self.navigation_manager.return_to_start()
-
-            goal_handle.succeed()
         except CancelGoalException:
-            msg = "Return to Start Canceled by User."
+            msg = "Return to Start canceled by user."
             self.get_logger().info(msg)
-            result.result = msg
+            self._set_result(result, msg)
             goal_handle.canceled()
+            return result
+        except ValueError as exc:
+            msg = f"Return to Start failed: {exc}"
+            self.get_logger().error(msg)
+            self._set_result(result, msg)
+            goal_handle.abort()
+            return result
 
+        self.get_logger().info("Return to Start Finished.")
+        self._set_result(result, "")
+        goal_handle.succeed()
         return result
 
     def _play_column_execute(self, goal_handle):
         # Reset cancel event for goal.
         self.cancel_event.clear()
 
+        # Defensively enforce position mode.
+        self.switch_to_position_mode()
+
         result = PlayColumn.Result()
-        result.result = "Not implemented."
+        try:
+            target_column = goal_handle.request.column
+            self.navigation_manager.move_to_column(target_column)
+            self.token_manager.place_token(target_column)
+            sleep(5)
+            self.navigation_manager.return_to_start()
+        except CancelGoalException:
+            msg = "Play Column canceled by user."
+            self.get_logger().info(msg)
+            self._set_result(result, msg)
+            goal_handle.canceled()
+            return result
+        except ValueError as exc:
+            msg = f"Play Column failed: {exc}"
+            self.get_logger().error(msg)
+            self._set_result(result, msg)
+            goal_handle.abort()
+            return result
+
+        self.get_logger().info("Play Column Finished.")
+        self._set_result(result, "")
         goal_handle.succeed()
+        return result
+
+    def _cancel_execute(self, _):
+        self.cancel_event.set()
+        self.stop_the_robot()
+        return CancelResponse.ACCEPT
+
+    @staticmethod
+    def _set_result(result, message: str):
+        result.result = message
         return result
 
 

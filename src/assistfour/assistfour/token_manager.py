@@ -56,7 +56,7 @@ class TokenManager:
             arm_extent + end_to_feeder.transform.translation.x - FEEDER_ARM_OFFSET
         )
 
-        # Lift arm.
+        # Lift arm and adjust base.
         self._node.checked_pose_move(
             {
                 "translate_mobile_base": end_to_feeder.transform.translation.y,
@@ -108,16 +108,14 @@ class TokenManager:
             arm_extent + end_to_feeder.transform.translation.z - COLUMN_ARM_OFFSET
         )
 
-        # Lift arm.
+        # Lift arm, adjust base, roll wrist.
         self._node.checked_pose_move(
             {
                 "translate_mobile_base": end_to_feeder.transform.translation.y,
                 "joint_lift": target_lift_height,
+                "joint_wrist_roll": radians(90),
             }
         )
-
-        # Rotate arm
-        self._node.checked_pose_move({"joint_wrist_roll": radians(90)})
 
         # Extend arm.
         self._node.checked_pose_move({"joint_arm": target_arm_extent})
