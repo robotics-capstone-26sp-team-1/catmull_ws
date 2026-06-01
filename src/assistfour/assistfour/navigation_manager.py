@@ -40,6 +40,8 @@ class NavigationManager:
         # Marker searching.
         self._search_spin_loop: Timer | None = None
         self._search_spin_stop_event = Event()
+        self._rotate_alt = True
+
 
     def move_to_column(self, column_number: int):
         frame_name = COLUMN_MAP[column_number]
@@ -50,7 +52,8 @@ class NavigationManager:
 
     def move_to_marker(self, name: str, offset: float):
         """High level operation to drive from anywhere to a marker and align arm to face it."""
-        self.point_at_marker(name, True, offset, 0)
+        self.point_at_marker(name, self._rotate_alt, offset, 0)
+        self._rotate_alt = not self._rotate_alt
         self.drive_to_marker(name, offset)
         self.point_at_marker(name, False, 0, -90)
 

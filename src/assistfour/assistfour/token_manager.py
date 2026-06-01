@@ -125,7 +125,7 @@ class TokenManager:
         # Drop the token.
         self._node.checked_pose_move({"gripper_aperture": GRIPPER_OPEN})
 
-        sleep(7)
+        sleep(1)
 
         # Retract arm.
         self._node.checked_pose_move({"joint_arm": 0.0})
