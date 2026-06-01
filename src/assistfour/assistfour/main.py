@@ -94,14 +94,21 @@ class Main(HelloNode):
             self.token_manager.grab_token()
             sleep(5)
             self.navigation_manager.return_to_start()
-
-            goal_handle.succeed()
         except CancelGoalException:
             msg = "Get Token canceled by user."
             self.get_logger().info(msg)
-            result.result = msg
+            self._set_result(result, msg)
             goal_handle.canceled()
+            return result
+        except ValueError as exc:
+            msg = f"Get Token failed: {exc}"
+            self.get_logger().error(msg)
+            self._set_result(result, msg)
+            goal_handle.abort()
+            return result
 
+        self._set_result(result, "Get Token completed successfully.")
+        goal_handle.succeed()
         return result
 
     def _return_to_start_execute(self, goal_handle):
@@ -111,14 +118,21 @@ class Main(HelloNode):
         result = GotoMarker.Result()
         try:
             self.navigation_manager.return_to_start()
-
-            goal_handle.succeed()
         except CancelGoalException:
             msg = "Return to Start canceled by user."
             self.get_logger().info(msg)
-            result.result = msg
+            self._set_result(result, msg)
             goal_handle.canceled()
+            return result
+        except ValueError as exc:
+            msg = f"Return to Start failed: {exc}"
+            self.get_logger().error(msg)
+            self._set_result(result, msg)
+            goal_handle.abort()
+            return result
 
+        self._set_result(result, "Return to Start completed successfully.")
+        goal_handle.succeed()
         return result
 
     def _play_column_execute(self, goal_handle):
@@ -132,14 +146,21 @@ class Main(HelloNode):
             self.token_manager.place_token(target_column)
             sleep(5)
             self.navigation_manager.return_to_start()
-
-            goal_handle.succeed()
         except CancelGoalException:
             msg = "Play Column canceled by user."
             self.get_logger().info(msg)
-            result.result = msg
+            self._set_result(result, msg)
             goal_handle.canceled()
+            return result
+        except ValueError as exc:
+            msg = f"Play Column failed: {exc}"
+            self.get_logger().error(msg)
+            self._set_result(result, msg)
+            goal_handle.abort()
+            return result
 
+        self._set_result(result, "Play Column completed successfully.")
+        goal_handle.succeed()
         return result
 
     def _cancel_execute(self, _):
@@ -147,6 +168,12 @@ class Main(HelloNode):
         self.stop_the_robot()
         self.switch_to_position_mode()
         return CancelResponse.ACCEPT
+
+    @staticmethod
+    def _set_result(result, message: str):
+        result.result = message
+        return result
+
 
 
 def main():
